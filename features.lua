@@ -1441,13 +1441,13 @@ function Ryze.openConfigModal()
     })
     overlay.MouseButton1Click:Connect(function()
         local m = configModal; configModal = nil
-        closeModal(m, 420, 70)
+        closeModal(m, 360, 60)
     end)
     TweenService:Create(configModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
     local content = new("Frame", {
         Name = "modalContent",
-        Size = UDim2.new(0, 420, 0, 70),
-        Position = UDim2.new(0.5, -210, 0.5, -240),
+        Size = UDim2.new(0, 360, 0, 60),
+        Position = UDim2.new(0.5, -180, 0.5, -180),
         BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
         BorderSizePixel = 0, ZIndex = 521, ClipsDescendants = true,
         Parent = configModal,
@@ -1455,7 +1455,7 @@ function Ryze.openConfigModal()
     Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
     stroke(content, Theme.cardBorder, 1, 0.2)
     TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 420, 0, 480), BackgroundTransparency = 0,
+        Size = UDim2.new(0, 360, 0, 360), BackgroundTransparency = 0,
     }):Play()
     task.wait(0.05)
 
@@ -1486,7 +1486,7 @@ function Ryze.openConfigModal()
     closeBtn.MouseButton1Click:Connect(function()
         playHover()
         local m = configModal; configModal = nil
-        closeModal(m, 420, 70)
+        closeModal(m, 360, 60)
     end)
 
     local saveRow = new("Frame", {
@@ -1666,13 +1666,13 @@ function Ryze.openCurrentConfigView()
     })
     overlay.MouseButton1Click:Connect(function()
         local m = viewModal; viewModal = nil
-        closeModal(m, 400, 70)
+        closeModal(m, 360, 60)
     end)
     TweenService:Create(viewModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
     local content = new("Frame", {
         Name = "modalContent",
-        Size = UDim2.new(0, 400, 0, 70),
-        Position = UDim2.new(0.5, -200, 0.5, -240),
+        Size = UDim2.new(0, 360, 0, 60),
+        Position = UDim2.new(0.5, -180, 0.5, -180),
         BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
         BorderSizePixel = 0, ZIndex = 531, ClipsDescendants = true,
         Parent = viewModal,
@@ -1680,7 +1680,7 @@ function Ryze.openCurrentConfigView()
     Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
     stroke(content, Theme.cardBorder, 1, 0.2)
     TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 400, 0, 480), BackgroundTransparency = 0,
+        Size = UDim2.new(0, 360, 0, 360), BackgroundTransparency = 0,
     }):Play()
     task.wait(0.05)
 
