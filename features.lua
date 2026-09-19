@@ -1262,6 +1262,517 @@ end
 
 Ryze.openColorModal = openColorModal
 
+local configModal
+
+local function collectConfig()
+    return {
+        aimbot = {
+            active = aimbotCfg.active, part = aimbotCfg.part, fov = aimbotCfg.fov,
+            distance = aimbotCfg.distance, smooth = aimbotCfg.smooth,
+            showFov = aimbotCfg.showFov, wallCheck = aimbotCfg.wallCheck,
+        },
+        silent = {
+            active = silentCfg.active, part = silentCfg.part, fov = silentCfg.fov,
+            distance = silentCfg.distance, triggerMode = silentCfg.triggerMode,
+            showFov = silentCfg.showFov, mode = silentCfg.mode,
+            wallCheck = silentCfg.wallCheck, lockOnShoot = silentCfg.lockOnShoot,
+        },
+        team = {
+            active = teamCheckCfg.active, auto = teamCheckCfg.auto, manual = teamCheckCfg.manual,
+        },
+        esp = {
+            active = espCfg.active, skeleton = espCfg.skeleton,
+            skeletonThickness = espCfg.skeletonThickness,
+            skeletonColor = {espCfg.skeletonColor.R, espCfg.skeletonColor.G, espCfg.skeletonColor.B},
+            espDistance = espCfg.espDistance, rgbMode = espCfg.rgbMode, rgbSpeed = espCfg.rgbSpeed,
+        },
+        general = {
+            wallhack = state.wallhack, crosshairEnabled = state.crosshairEnabled,
+            showFps = state.showFps, menuScale = state.menuScale,
+            fovStyle = state.fovStyle, dragEnabled = state.dragEnabled,
+        },
+        binds = (function()
+            local b = {}
+            for k, v in pairs(binds) do if v then b[k] = v.Name end end
+            return b
+        end)(),
+        accent = {Ryze.accentColor.R, Ryze.accentColor.G, Ryze.accentColor.B},
+    }
+end
+
+local function applyConfig(cfg)
+    if not cfg then return false end
+    if cfg.aimbot then
+        for k, v in pairs(cfg.aimbot) do aimbotCfg[k] = v end
+        if cfg.aimbot.active then updateFov(); startAimbot() else stopAimbot() end
+    end
+    if cfg.silent then
+        for k, v in pairs(cfg.silent) do silentCfg[k] = v end
+        if cfg.silent.active then updateSilentFov(); startSilent()
+        else
+            if ui.silentFovImage then ui.silentFovImage:Destroy(); ui.silentFovImage = nil end
+            stopSilentFovLoop(); stopSilent()
+        end
+    end
+    if cfg.team then
+        for k, v in pairs(cfg.team) do teamCheckCfg[k] = v end
+    end
+    if cfg.esp then
+        espCfg.active = cfg.esp.active
+        espCfg.skeleton = cfg.esp.skeleton
+        espCfg.skeletonThickness = cfg.esp.skeletonThickness
+        espCfg.espDistance = cfg.esp.espDistance
+        espCfg.rgbMode = cfg.esp.rgbMode
+        espCfg.rgbSpeed = cfg.esp.rgbSpeed
+        if cfg.esp.skeletonColor then
+            espCfg.skeletonColor = Color3.new(
+                cfg.esp.skeletonColor[1] or 0,
+                cfg.esp.skeletonColor[2] or 1,
+                cfg.esp.skeletonColor[3] or 0
+            )
+        end
+        if espCfg.active and espCfg.skeleton then startEspLoop() else stopEspLoop() end
+    end
+    if cfg.general then
+        state.wallhack = cfg.general.wallhack
+        state.crosshairEnabled = cfg.general.crosshairEnabled
+        state.showFps = cfg.general.showFps
+        state.menuScale = cfg.general.menuScale
+        state.fovStyle = cfg.general.fovStyle
+        state.dragEnabled = cfg.general.dragEnabled
+        if ui.crosshair then ui.crosshair.Visible = state.crosshairEnabled end
+        if ui.fpsLabel then ui.fpsLabel.Visible = state.showFps end
+        if ui.uiScale then ui.uiScale.Scale = state.menuScale end
+        if uiSync.cross then uiSync.cross(state.crosshairEnabled) end
+        if uiSync.wall then uiSync.wall(state.wallhack) end
+        if uiSync.fps then uiSync.fps(state.showFps) end
+        if uiSync.drag then uiSync.drag(state.dragEnabled) end
+        updateFov()
+    end
+    if cfg.binds then
+        for k, name in pairs(cfg.binds) do
+            if name and Enum.KeyCode[name] then binds[k] = Enum.KeyCode[name] end
+        end
+    end
+    if cfg.accent then
+        Ryze.applyAccent(Color3.new(cfg.accent[1] or 1, cfg.accent[2] or 1, cfg.accent[3] or 1))
+        if uiSync.colorPreview then
+            uiSync.colorPreview.BackgroundColor3 = Ryze.accentColor
+        end
+    end
+    return true
+end
+Ryze.applyConfig = applyConfig
+
+local CONFIG_FOLDER = Ryze.CONFIG_FOLDER or "RyzeConfigs"
+
+local function ensureFolder()
+    if not isfolder or not makefolder then return false end
+    if not isfolder(CONFIG_FOLDER) then pcall(makefolder, CONFIG_FOLDER) end
+    return true
+end
+
+local function listConfigs()
+    if not ensureFolder() or not listfiles then return {} end
+    local ok, files = pcall(function() return listfiles(CONFIG_FOLDER) end)
+    if not ok or not files then return {} end
+    local names = {}
+    for _, path in ipairs(files) do
+        if type(path) == "string" and path:sub(-5) == ".json" then
+            local name = path:match("([^/\\]+)%.json$")
+            if name then table.insert(names, name) end
+        end
+    end
+    table.sort(names)
+    return names
+end
+
+local function saveConfig(name)
+    if not name or name == "" then return false end
+    if not ensureFolder() or not writefile then return false end
+    local data = collectConfig()
+    local encoded
+    local HttpS = Ryze.Services.Http
+    if HttpS then
+        local ok, e = pcall(function() return HttpS:JSONEncode(data) end)
+        if ok then encoded = e end
+    end
+    if not encoded then return false end
+    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
+    return (pcall(function() writefile(path, encoded) end))
+end
+
+local function loadConfig(name)
+    if not name or name == "" or not readfile then return false end
+    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
+    local ok, content = pcall(function() return readfile(path) end)
+    if not ok or not content then return false end
+    local data
+    local HttpS = Ryze.Services.Http
+    if HttpS then
+        local ok2, decoded = pcall(function() return HttpS:JSONDecode(content) end)
+        if ok2 then data = decoded end
+    end
+    if not data then return false end
+    return applyConfig(data)
+end
+
+local function deleteConfig(name)
+    if not name or name == "" or not delfile then return false end
+    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
+    return (pcall(function() delfile(path) end))
+end
+
+function Ryze.openConfigModal()
+    if configModal then return end
+    configModal = new("Frame", {
+        Name = "ConfigModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 520, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(configModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 520, Parent = configModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = configModal; configModal = nil
+        closeModal(m, 420, 70)
+    end)
+    TweenService:Create(configModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 420, 0, 70),
+        Position = UDim2.new(0.5, -210, 0.5, -240),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 521, ClipsDescendants = true,
+        Parent = configModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 420, 0, 480), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 522, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "Gerenciar Configs",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 523, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 523, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = configModal; configModal = nil
+        closeModal(m, 420, 70)
+    end)
+
+    local saveRow = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 36),
+        Position = UDim2.new(0, 16, 0, 56),
+        BackgroundTransparency = 1, ZIndex = 522, Parent = content,
+    })
+    local nameBox = new("TextBox", {
+        Size = UDim2.new(1, -110, 1, 0),
+        BackgroundColor3 = Theme.hover,
+        Text = "",
+        PlaceholderText = "Nome da config...",
+        PlaceholderColor3 = Theme.textDim,
+        TextColor3 = Theme.text,
+        TextSize = 12, Font = Enum.Font.GothamMedium,
+        BorderSizePixel = 0, ClearTextOnFocus = false,
+        ZIndex = 523, Parent = saveRow,
+    })
+    corner(nameBox, 6)
+    stroke(nameBox, Theme.cardBorder, 1, 0.3)
+
+    local saveBtn = new("TextButton", {
+        Size = UDim2.new(0, 100, 1, 0),
+        Position = UDim2.new(1, -100, 0, 0),
+        BackgroundColor3 = Ryze.accentColor,
+        Text = "Salvar",
+        TextColor3 = getContrastColor(Ryze.accentColor),
+        TextSize = 12, Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 523, Parent = saveRow,
+    })
+    corner(saveBtn, 6)
+    hookHover(saveBtn)
+
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 100),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 522, Parent = content,
+    })
+
+    local listHolder = new("ScrollingFrame", {
+        Size = UDim2.new(1, -32, 1, -140),
+        Position = UDim2.new(0, 16, 0, 110),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
+        ScrollBarImageTransparency = 0.4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Name = "accentScroll", ZIndex = 522, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+        Parent = listHolder,
+    })
+
+    local function refreshList()
+        for _, c in ipairs(listHolder:GetChildren()) do
+            if not c:IsA("UIListLayout") then c:Destroy() end
+        end
+        local names = listConfigs()
+        if #names == 0 then
+            new("TextLabel", {
+                Size = UDim2.new(1, 0, 0, 40),
+                BackgroundTransparency = 1,
+                Text = "Nenhuma config salva ainda.",
+                TextColor3 = Theme.textDim,
+                TextSize = 12, Font = Enum.Font.Gotham,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                LayoutOrder = 1, ZIndex = 523,
+                Parent = listHolder,
+            })
+            return
+        end
+        for i, name in ipairs(names) do
+            local row = new("Frame", {
+                Size = UDim2.new(1, -6, 0, 40),
+                BackgroundColor3 = Theme.card,
+                BorderSizePixel = 0,
+                LayoutOrder = i, ZIndex = 523,
+                Parent = listHolder,
+            })
+            corner(row, 6)
+            stroke(row, Theme.cardBorder, 1, 0.4)
+
+            new("TextLabel", {
+                Size = UDim2.new(1, -160, 1, 0),
+                Position = UDim2.new(0, 12, 0, 0),
+                BackgroundTransparency = 1,
+                Text = name,
+                TextColor3 = Theme.text,
+                TextSize = 12, Font = Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 524, Parent = row,
+            })
+
+            local loadBtn = new("TextButton", {
+                Size = UDim2.new(0, 60, 0, 26),
+                Position = UDim2.new(1, -140, 0.5, -13),
+                BackgroundColor3 = Ryze.accentColor,
+                Text = "Carregar",
+                TextColor3 = getContrastColor(Ryze.accentColor),
+                TextSize = 11, Font = Enum.Font.GothamBold,
+                BorderSizePixel = 0, AutoButtonColor = false,
+                ZIndex = 524, Parent = row,
+            })
+            corner(loadBtn, 5)
+            hookHover(loadBtn)
+            loadBtn.MouseButton1Click:Connect(function()
+                playHover()
+                loadConfig(name)
+            end)
+
+            local delBtn = new("TextButton", {
+                Size = UDim2.new(0, 26, 0, 26),
+                Position = UDim2.new(1, -30, 0.5, -13),
+                BackgroundColor3 = Theme.hover,
+                Text = "×", TextColor3 = Theme.textDim, TextSize = 14,
+                Font = Enum.Font.GothamBold,
+                BorderSizePixel = 0, AutoButtonColor = false,
+                ZIndex = 524, Parent = row,
+            })
+            corner(delBtn, 13)
+            hookHover(delBtn)
+            delBtn.MouseEnter:Connect(function()
+                tween(delBtn, {BackgroundColor3 = Theme.danger, TextColor3 = Color3.fromRGB(255,255,255)})
+            end)
+            delBtn.MouseLeave:Connect(function()
+                tween(delBtn, {BackgroundColor3 = Theme.hover, TextColor3 = Theme.textDim})
+            end)
+            delBtn.MouseButton1Click:Connect(function()
+                playHover()
+                deleteConfig(name)
+                refreshList()
+            end)
+        end
+    end
+
+    saveBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local n = nameBox.Text
+        if n and n ~= "" then
+            if saveConfig(n) then
+                nameBox.Text = ""
+                saveBtn.Text = "Salvo!"
+                task.delay(1, function()
+                    if saveBtn and saveBtn.Parent then saveBtn.Text = "Salvar" end
+                end)
+                refreshList()
+            end
+        end
+    end)
+
+    refreshList()
+end
+
+local viewModal
+
+function Ryze.openCurrentConfigView()
+    if viewModal then return end
+    viewModal = new("Frame", {
+        Name = "ViewModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 530, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(viewModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 530, Parent = viewModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = viewModal; viewModal = nil
+        closeModal(m, 400, 70)
+    end)
+    TweenService:Create(viewModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 400, 0, 70),
+        Position = UDim2.new(0.5, -200, 0.5, -240),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 531, ClipsDescendants = true,
+        Parent = viewModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 400, 0, 480), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 532, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "Config Atual",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 533, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 533, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = viewModal; viewModal = nil
+        closeModal(m, 400, 70)
+    end)
+
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 56),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 532, Parent = content,
+    })
+
+    local list = new("ScrollingFrame", {
+        Size = UDim2.new(1, -32, 1, -76),
+        Position = UDim2.new(0, 16, 0, 66),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
+        ScrollBarImageTransparency = 0.4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Name = "accentScroll", ZIndex = 532, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 4),
+        Parent = list,
+    })
+
+    local function addLine(text, active)
+        new("TextLabel", {
+            Size = UDim2.new(1, -6, 0, 22),
+            BackgroundTransparency = 1,
+            Text = text,
+            TextColor3 = active and Ryze.accentColor or Theme.textDim,
+            TextSize = 12, Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            LayoutOrder = nextOrder(list),
+            ZIndex = 533, Parent = list,
+        })
+    end
+
+    addLine("▸ Aimbot: " .. (aimbotCfg.active and "LIGADO" or "desligado"), aimbotCfg.active)
+    addLine("   Parte: " .. tostring(aimbotCfg.part), false)
+    addLine("   FOV: " .. tostring(aimbotCfg.fov) .. " | Dist: " .. tostring(aimbotCfg.distance), false)
+    addLine("   Smooth: " .. string.format("%.2f", aimbotCfg.smooth) .. " | Wall: " .. tostring(aimbotCfg.wallCheck), false)
+
+    addLine("▸ Silent: " .. (silentCfg.active and "LIGADO" or "desligado"), silentCfg.active)
+    addLine("   Modo: " .. tostring(silentCfg.mode) .. " | Trigger: " .. tostring(silentCfg.triggerMode), false)
+    addLine("   FOV: " .. tostring(silentCfg.fov) .. " | Part: " .. tostring(silentCfg.part), false)
+
+    addLine("▸ ESP: " .. (espCfg.active and "LIGADO" or "desligado"), espCfg.active)
+    addLine("   Skeleton: " .. tostring(espCfg.skeleton) .. " | RGB: " .. tostring(espCfg.rgbMode), false)
+    addLine("   Dist: " .. tostring(espCfg.espDistance), false)
+
+    addLine("▸ Team Check: " .. (teamCheckCfg.active and "LIGADO" or "desligado"), teamCheckCfg.active)
+    addLine("   Auto: " .. tostring(teamCheckCfg.auto) .. " | Manual: " .. tostring(teamCheckCfg.manual), false)
+
+    addLine("▸ Wallhack: " .. (state.wallhack and "LIGADO" or "desligado"), state.wallhack)
+    addLine("▸ Crosshair: " .. (state.crosshairEnabled and "LIGADO" or "desligado"), state.crosshairEnabled)
+    addLine("▸ FPS counter: " .. (state.showFps and "LIGADO" or "desligado"), state.showFps)
+    addLine("▸ Escala: " .. string.format("%.2f", state.menuScale), false)
+end
+
 local pageBuilders = {Aimbot = {}, Visual = {}, Settings = {}}
 Ryze.pageBuilders = pageBuilders
 
@@ -1435,14 +1946,115 @@ end
 
 pageBuilders.Settings.Configs = function(parent)
     local sf = makeScrollingPage(parent)
-    local card = makeCard(sf, "Info", 1)
+
+    local card = makeCard(sf, "Gerenciador", 2)
+
+    local openRow = new("Frame", {
+        Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT + 4),
+        BackgroundTransparency = 1,
+        LayoutOrder = nextOrder(card),
+        Parent = card,
+    })
+    local openBtn = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Theme.hover,
+        Text = "",
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = openRow,
+    })
+    corner(openBtn, 8)
+    stroke(openBtn, Theme.cardBorder, 1, 0.3)
+    hookHover(openBtn)
+    openBtn.MouseEnter:Connect(function() tween(openBtn, {BackgroundColor3 = Theme.cardBorder}) end)
+    openBtn.MouseLeave:Connect(function() tween(openBtn, {BackgroundColor3 = Theme.hover}) end)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Abrir Gerenciador de Configs",
+        TextColor3 = Theme.text,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = openBtn,
+    })
+
+    new("TextLabel", {
+        Size = UDim2.new(0, 20, 1, 0),
+        Position = UDim2.new(1, -28, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "›",
+        TextColor3 = Theme.textDim,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = openBtn,
+    })
+
+    openBtn.MouseButton1Click:Connect(function()
+        playHover()
+        if Ryze.openConfigModal then Ryze.openConfigModal() end
+    end)
+
+    local viewRow = new("Frame", {
+        Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT + 4),
+        BackgroundTransparency = 1,
+        LayoutOrder = nextOrder(card),
+        Parent = card,
+    })
+    local viewBtn = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Theme.hover,
+        Text = "",
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = viewRow,
+    })
+    corner(viewBtn, 8)
+    stroke(viewBtn, Theme.cardBorder, 1, 0.3)
+    hookHover(viewBtn)
+    viewBtn.MouseEnter:Connect(function() tween(viewBtn, {BackgroundColor3 = Theme.cardBorder}) end)
+    viewBtn.MouseLeave:Connect(function() tween(viewBtn, {BackgroundColor3 = Theme.hover}) end)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Ver Config Atual",
+        TextColor3 = Theme.text,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = viewBtn,
+    })
+
+    new("TextLabel", {
+        Size = UDim2.new(0, 20, 1, 0),
+        Position = UDim2.new(1, -28, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "›",
+        TextColor3 = Theme.textDim,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = viewBtn,
+    })
+
+    viewBtn.MouseButton1Click:Connect(function()
+        playHover()
+        if Ryze.openCurrentConfigView then Ryze.openCurrentConfigView() end
+    end)
+
+    local card2 = makeCard(sf, "Info", 1)
     new("TextLabel", {
         Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT - 2),
         BackgroundTransparency = 1,
-        Text = "Configs requerem executor com writefile/readfile.",
+        Text = "Salva tudo: aimbot, silent, esp, team check, cores, binds, escala.",
         TextColor3 = Theme.textDim, TextSize = 11,
         Font = Enum.Font.Gotham, TextWrapped = true,
-        LayoutOrder = nextOrder(card), Parent = card,
+        LayoutOrder = nextOrder(card2), Parent = card2,
     })
 end
 
@@ -1662,7 +2274,7 @@ local function createUI()
     ui.mainFrame.InputBegan:Connect(function(input)
         if not state.dragEnabled then return end
         if state.sliderDragging then return end
-        if colorModal then return end
+        if colorModal or configModal or viewModal then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -1774,7 +2386,7 @@ UIS.InputEnded:Connect(function(input)
         if silentCfg.triggerMode == "HOLD" then
             state.silentHeld = false
             restoreSilentShot()
-            if silentCfg.lockOnShot then
+            if silentCfg.lockOnShoot then
                 state.silentLocked = false
                 state.silentLockedTarget = nil
                 state.silentLockedPart = nil
