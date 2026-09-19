@@ -2,7 +2,7 @@
 -- Loader raiz do Ryze Menu
 -- Uso: loadstring(game:HttpGet("https://raw.githubusercontent.com/SEU_USER/ryze-menu/main/main.lua"))()
 
-local BASE_URL = "https://raw.githubusercontent.com/SEU_USER/ryze-menu/main/"
+local BASE_URL = "local BASE_URL = "https://raw.githubusercontent.com/Thnapixta/Ryze/main/""
 
 _G.Ryze = _G.Ryze or {}
 _G.Ryze.BASE_URL = BASE_URL
