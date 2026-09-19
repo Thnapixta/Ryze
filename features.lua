@@ -1125,6 +1125,8 @@ local function makeKeybindRow(parent, label, getKey, setKey)
 end
 
 local colorModal
+local configModal
+local viewModal
 
 local function closeModal(m, w, h)
     if not m then return end
@@ -1163,7 +1165,8 @@ local function openColorModal()
     local content = new("Frame", {
         Name = "modalContent",
         Size = UDim2.new(0, 320, 0, 70),
-        Position = UDim2.new(0.5, -160, 0.5, -150),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
         BorderSizePixel = 0, ZIndex = 501, ClipsDescendants = true,
         Parent = colorModal,
@@ -1261,8 +1264,6 @@ local function openColorModal()
 end
 
 Ryze.openColorModal = openColorModal
-
-local configModal
 
 local function collectConfig()
     return {
@@ -1441,13 +1442,14 @@ function Ryze.openConfigModal()
     })
     overlay.MouseButton1Click:Connect(function()
         local m = configModal; configModal = nil
-        closeModal(m, 360, 60)
+        closeModal(m, 340, 60)
     end)
     TweenService:Create(configModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
     local content = new("Frame", {
         Name = "modalContent",
-        Size = UDim2.new(0, 360, 0, 60),
-        Position = UDim2.new(0.5, -180, 0.5, -180),
+        Size = UDim2.new(0, 340, 0, 60),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
         BorderSizePixel = 0, ZIndex = 521, ClipsDescendants = true,
         Parent = configModal,
@@ -1455,7 +1457,7 @@ function Ryze.openConfigModal()
     Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
     stroke(content, Theme.cardBorder, 1, 0.2)
     TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 360, 0, 360), BackgroundTransparency = 0,
+        Size = UDim2.new(0, 340, 0, 360), BackgroundTransparency = 0,
     }):Play()
     task.wait(0.05)
 
@@ -1486,7 +1488,7 @@ function Ryze.openConfigModal()
     closeBtn.MouseButton1Click:Connect(function()
         playHover()
         local m = configModal; configModal = nil
-        closeModal(m, 360, 60)
+        closeModal(m, 340, 60)
     end)
 
     local saveRow = new("Frame", {
@@ -1495,7 +1497,7 @@ function Ryze.openConfigModal()
         BackgroundTransparency = 1, ZIndex = 522, Parent = content,
     })
     local nameBox = new("TextBox", {
-        Size = UDim2.new(1, -110, 1, 0),
+        Size = UDim2.new(1, -90, 1, 0),
         BackgroundColor3 = Theme.hover,
         Text = "",
         PlaceholderText = "Nome da config...",
@@ -1509,8 +1511,8 @@ function Ryze.openConfigModal()
     stroke(nameBox, Theme.cardBorder, 1, 0.3)
 
     local saveBtn = new("TextButton", {
-        Size = UDim2.new(0, 100, 1, 0),
-        Position = UDim2.new(1, -100, 0, 0),
+        Size = UDim2.new(0, 80, 1, 0),
+        Position = UDim2.new(1, -80, 0, 0),
         BackgroundColor3 = Ryze.accentColor,
         Text = "Salvar",
         TextColor3 = getContrastColor(Ryze.accentColor),
@@ -1575,7 +1577,7 @@ function Ryze.openConfigModal()
             stroke(row, Theme.cardBorder, 1, 0.4)
 
             new("TextLabel", {
-                Size = UDim2.new(1, -160, 1, 0),
+                Size = UDim2.new(1, -130, 1, 0),
                 Position = UDim2.new(0, 12, 0, 0),
                 BackgroundTransparency = 1,
                 Text = name,
@@ -1588,7 +1590,7 @@ function Ryze.openConfigModal()
 
             local loadBtn = new("TextButton", {
                 Size = UDim2.new(0, 60, 0, 26),
-                Position = UDim2.new(1, -140, 0.5, -13),
+                Position = UDim2.new(1, -100, 0.5, -13),
                 BackgroundColor3 = Ryze.accentColor,
                 Text = "Carregar",
                 TextColor3 = getContrastColor(Ryze.accentColor),
@@ -1646,8 +1648,6 @@ function Ryze.openConfigModal()
     refreshList()
 end
 
-local viewModal
-
 function Ryze.openCurrentConfigView()
     if viewModal then return end
     viewModal = new("Frame", {
@@ -1666,13 +1666,14 @@ function Ryze.openCurrentConfigView()
     })
     overlay.MouseButton1Click:Connect(function()
         local m = viewModal; viewModal = nil
-        closeModal(m, 360, 60)
+        closeModal(m, 340, 60)
     end)
     TweenService:Create(viewModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
     local content = new("Frame", {
         Name = "modalContent",
-        Size = UDim2.new(0, 360, 0, 60),
-        Position = UDim2.new(0.5, -180, 0.5, -180),
+        Size = UDim2.new(0, 340, 0, 60),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
         BorderSizePixel = 0, ZIndex = 531, ClipsDescendants = true,
         Parent = viewModal,
@@ -1680,7 +1681,7 @@ function Ryze.openCurrentConfigView()
     Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
     stroke(content, Theme.cardBorder, 1, 0.2)
     TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 360, 0, 360), BackgroundTransparency = 0,
+        Size = UDim2.new(0, 340, 0, 360), BackgroundTransparency = 0,
     }):Play()
     task.wait(0.05)
 
@@ -1711,7 +1712,7 @@ function Ryze.openCurrentConfigView()
     closeBtn.MouseButton1Click:Connect(function()
         playHover()
         local m = viewModal; viewModal = nil
-        closeModal(m, 400, 70)
+        closeModal(m, 340, 60)
     end)
 
     new("Frame", {
@@ -1751,26 +1752,26 @@ function Ryze.openCurrentConfigView()
         })
     end
 
-    addLine("▸ Aimbot: " .. (aimbotCfg.active and "LIGADO" or "desligado"), aimbotCfg.active)
-    addLine("   Parte: " .. tostring(aimbotCfg.part), false)
-    addLine("   FOV: " .. tostring(aimbotCfg.fov) .. " | Dist: " .. tostring(aimbotCfg.distance), false)
-    addLine("   Smooth: " .. string.format("%.2f", aimbotCfg.smooth) .. " | Wall: " .. tostring(aimbotCfg.wallCheck), false)
+    addLine("Aimbot: " .. (aimbotCfg.active and "LIGADO" or "desligado"), aimbotCfg.active)
+    addLine("  Parte: " .. tostring(aimbotCfg.part), false)
+    addLine("  FOV: " .. tostring(aimbotCfg.fov) .. " | Dist: " .. tostring(aimbotCfg.distance), false)
+    addLine("  Smooth: " .. string.format("%.2f", aimbotCfg.smooth) .. " | Wall: " .. tostring(aimbotCfg.wallCheck), false)
 
-    addLine("▸ Silent: " .. (silentCfg.active and "LIGADO" or "desligado"), silentCfg.active)
-    addLine("   Modo: " .. tostring(silentCfg.mode) .. " | Trigger: " .. tostring(silentCfg.triggerMode), false)
-    addLine("   FOV: " .. tostring(silentCfg.fov) .. " | Part: " .. tostring(silentCfg.part), false)
+    addLine("Silent: " .. (silentCfg.active and "LIGADO" or "desligado"), silentCfg.active)
+    addLine("  Modo: " .. tostring(silentCfg.mode) .. " | Trigger: " .. tostring(silentCfg.triggerMode), false)
+    addLine("  FOV: " .. tostring(silentCfg.fov) .. " | Part: " .. tostring(silentCfg.part), false)
 
-    addLine("▸ ESP: " .. (espCfg.active and "LIGADO" or "desligado"), espCfg.active)
-    addLine("   Skeleton: " .. tostring(espCfg.skeleton) .. " | RGB: " .. tostring(espCfg.rgbMode), false)
-    addLine("   Dist: " .. tostring(espCfg.espDistance), false)
+    addLine("ESP: " .. (espCfg.active and "LIGADO" or "desligado"), espCfg.active)
+    addLine("  Skeleton: " .. tostring(espCfg.skeleton) .. " | RGB: " .. tostring(espCfg.rgbMode), false)
+    addLine("  Dist: " .. tostring(espCfg.espDistance), false)
 
-    addLine("▸ Team Check: " .. (teamCheckCfg.active and "LIGADO" or "desligado"), teamCheckCfg.active)
-    addLine("   Auto: " .. tostring(teamCheckCfg.auto) .. " | Manual: " .. tostring(teamCheckCfg.manual), false)
+    addLine("Team Check: " .. (teamCheckCfg.active and "LIGADO" or "desligado"), teamCheckCfg.active)
+    addLine("  Auto: " .. tostring(teamCheckCfg.auto) .. " | Manual: " .. tostring(teamCheckCfg.manual), false)
 
-    addLine("▸ Wallhack: " .. (state.wallhack and "LIGADO" or "desligado"), state.wallhack)
-    addLine("▸ Crosshair: " .. (state.crosshairEnabled and "LIGADO" or "desligado"), state.crosshairEnabled)
-    addLine("▸ FPS counter: " .. (state.showFps and "LIGADO" or "desligado"), state.showFps)
-    addLine("▸ Escala: " .. string.format("%.2f", state.menuScale), false)
+    addLine("Wallhack: " .. (state.wallhack and "LIGADO" or "desligado"), state.wallhack)
+    addLine("Crosshair: " .. (state.crosshairEnabled and "LIGADO" or "desligado"), state.crosshairEnabled)
+    addLine("FPS counter: " .. (state.showFps and "LIGADO" or "desligado"), state.showFps)
+    addLine("Escala: " .. string.format("%.2f", state.menuScale), false)
 end
 
 local pageBuilders = {Aimbot = {}, Visual = {}, Settings = {}}
@@ -1985,7 +1986,7 @@ pageBuilders.Settings.Configs = function(parent)
         Size = UDim2.new(0, 20, 1, 0),
         Position = UDim2.new(1, -28, 0, 0),
         BackgroundTransparency = 1,
-        Text = "›",
+        Text = ">",
         TextColor3 = Theme.textDim,
         TextSize = 20,
         Font = Enum.Font.GothamBold,
@@ -2034,7 +2035,7 @@ pageBuilders.Settings.Configs = function(parent)
         Size = UDim2.new(0, 20, 1, 0),
         Position = UDim2.new(1, -28, 0, 0),
         BackgroundTransparency = 1,
-        Text = "›",
+        Text = ">",
         TextColor3 = Theme.textDim,
         TextSize = 20,
         Font = Enum.Font.GothamBold,
