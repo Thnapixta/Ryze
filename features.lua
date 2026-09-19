@@ -1,6 +1,3 @@
--- features.lua
--- Aimbot, silent, esp, fov, teamcheck, hooks, UI, modais, páginas
-
 local Ryze = _G.Ryze
 local player = Ryze.player
 local UIS = Ryze.Services.UIS
@@ -32,7 +29,6 @@ local espData = Ryze.espData
 Ryze.ui = Ryze.ui or {}
 local ui = Ryze.ui
 
--- ============ TEAM CHECK UTILS ============
 local function getTeamInfo(plr)
     local info = {obj=nil, name=nil, value=nil, rgb=nil}
     if plr.Team then
@@ -96,11 +92,6 @@ local function hasLineOfSight(origin, tPart, tChar)
     return result == nil
 end
 
-local function los(origin, tPart, tChar)
-    if state.wallhack then return true end
-    return hasLineOfSight(origin, tPart, tChar)
-end
-
 local function getBestPart(char, partName)
     if not char then return nil end
     local p = char:FindFirstChild(partName)
@@ -153,7 +144,6 @@ local function getAllCandidates(myHead, cam, partName, useMouseCenter, fov, dist
     return list
 end
 
--- ============ FOV ============
 local function makeFovImage(fov)
     local pixelSize = fov * 2 * C.FOV_SIZE_MULT
     local img = new("ImageLabel", {
@@ -255,7 +245,6 @@ end
 Ryze.updateSilentFov = updateSilentFov
 Ryze.stopSilentFovLoop = stopSilentFovLoop
 
--- ============ AIMBOT ============
 local function bestTarget(cfg, useMouseCenter)
     local char = player.Character
     if not isAlive(char) then return nil, nil end
@@ -312,7 +301,6 @@ end
 Ryze.startAimbot = startAimbot
 Ryze.stopAimbot = stopAimbot
 
--- ============ SILENT ============
 local function getSilentTarget()
     local char = player.Character
     if not isAlive(char) then return nil, nil end
@@ -426,7 +414,6 @@ local function silentAimHandler()
 end
 Ryze.silentAimHandler = silentAimHandler
 
--- ============ HOOKS ============
 local function hookSilentAim()
     if state.hooksApplied then return end
     if not getrawmetatable or not setreadonly or not newcclosure then return end
@@ -516,7 +503,6 @@ Ryze.features = {
     },
 }
 
--- ============ ESP (skeleton) ============
 local R15_PARTS = {
     "Head","UpperTorso","LowerTorso","LeftUpperArm","LeftLowerArm",
     "RightUpperArm","RightLowerArm","LeftUpperLeg","LeftLowerLeg","LeftFoot",
@@ -767,7 +753,6 @@ end
 Ryze.startEspLoop = startEspLoop
 Ryze.stopEspLoop = stopEspLoop
 
--- ============ COMPONENTES UI ============
 local function makeScrollingPage(parent)
     local sf = new("ScrollingFrame", {
         Size = UDim2.new(1, -12, 1, -8),
@@ -1139,8 +1124,7 @@ local function makeKeybindRow(parent, label, getKey, setKey)
     return row
 end
 
--- ============ MODAIS ============
-local colorModal, teamModal, espColorModal
+local colorModal
 
 local function closeModal(m, w, h)
     if not m then return end
@@ -1153,75 +1137,6 @@ local function closeModal(m, w, h)
         end
     end
     task.delay(0.18, function() if m and m.Parent then m:Destroy() end end)
-end
-
-local function buildModalBase(name, w, h)
-    local modal = new("Frame", {
-        Name = name,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        ZIndex = 510,
-        Parent = ui.mainFrame,
-    })
-    Ryze.asymmetricCorner(modal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    local overlay = new("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1, Text = "",
-        AutoButtonColor = false, ZIndex = 510,
-        Parent = modal,
-    })
-    TweenService:Create(modal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
-    local content = new("Frame", {
-        Name = "modalContent",
-        Size = UDim2.new(0, w, 0, 70),
-        Position = UDim2.new(0.5, -w/2, 0.5, -h/2),
-        BackgroundColor3 = Theme.bg,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 511,
-        ClipsDescendants = true,
-        Parent = modal,
-    })
-    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    stroke(content, Theme.cardBorder, 1, 0.2)
-    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, w, 0, h), BackgroundTransparency = 0,
-    }):Play()
-    task.wait(0.05)
-    return modal, content, overlay
-end
-
-local function makeModalHeader(content, title, onClose)
-    local header = new("Frame", {
-        Size = UDim2.new(1, -32, 0, 30),
-        Position = UDim2.new(0, 16, 0, 16),
-        BackgroundTransparency = 1, ZIndex = 512,
-        Parent = content,
-    })
-    new("TextLabel", {
-        Size = UDim2.new(1, -34, 1, 0),
-        BackgroundTransparency = 1, Text = title,
-        TextColor3 = Theme.text, TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 513, Parent = header,
-    })
-    local closeBtn = new("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -26, 0.5, -13),
-        BackgroundColor3 = Theme.hover,
-        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        ZIndex = 513, Parent = header,
-    })
-    corner(closeBtn, 13)
-    hookHover(closeBtn)
-    closeBtn.MouseButton1Click:Connect(function() playHover(); onClose() end)
-    return header
 end
 
 local function openColorModal()
@@ -1347,8 +1262,7 @@ end
 
 Ryze.openColorModal = openColorModal
 
--- ============ PAGES ============
-local pageBuilders = {Aimbot = {}, Visual = {}, Config = {}, Settings = {}}
+local pageBuilders = {Aimbot = {}, Visual = {}, Settings = {}}
 Ryze.pageBuilders = pageBuilders
 
 pageBuilders.Aimbot.Aimbot = function(parent)
@@ -1442,18 +1356,6 @@ pageBuilders.Visual.ESP = function(parent)
     makeSliderRow(card2, "RGB Speed", espCfg.rgbSpeed, 0.1, 5, function(v) espCfg.rgbSpeed = math.floor(v*10)/10 end)
 end
 
-pageBuilders.Config.Configs = function(parent)
-    local sf = makeScrollingPage(parent)
-    local card = makeCard(sf, "Info", 1)
-    new("TextLabel", {
-        Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT - 2), BackgroundTransparency = 1,
-        Text = "Configs requerem executor com writefile/readfile.",
-        TextColor3 = Theme.textDim, TextSize = 11,
-        Font = Enum.Font.Gotham, TextWrapped = true,
-        LayoutOrder = nextOrder(card), Parent = card,
-    })
-end
-
 pageBuilders.Settings.Toggles = function(parent)
     local sf = makeScrollingPage(parent)
     local card = makeCard(sf, "General", 3)
@@ -1531,12 +1433,23 @@ pageBuilders.Settings.Interface = function(parent)
     end)
 end
 
--- ============ JANELA ============
+pageBuilders.Settings.Configs = function(parent)
+    local sf = makeScrollingPage(parent)
+    local card = makeCard(sf, "Info", 1)
+    new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT - 2),
+        BackgroundTransparency = 1,
+        Text = "Configs requerem executor com writefile/readfile.",
+        TextColor3 = Theme.textDim, TextSize = 11,
+        Font = Enum.Font.Gotham, TextWrapped = true,
+        LayoutOrder = nextOrder(card), Parent = card,
+    })
+end
+
 local sidebarItems = {
     {key = "Aimbot",   name = "Aimbot",   tabs = {"Aimbot", "Silent", "TeamCheck"}},
     {key = "Visual",   name = "Visual",   tabs = {"ESP"}},
-    {key = "Config",   name = "Config",   tabs = {"Configs"}},
-    {key = "Settings", name = "Settings", tabs = {"Toggles", "Binds", "Interface"}},
+    {key = "Settings", name = "Settings", tabs = {"Toggles", "Binds", "Interface", "Configs"}},
 }
 
 local currentCategory = 1
@@ -1749,7 +1662,7 @@ local function createUI()
     ui.mainFrame.InputBegan:Connect(function(input)
         if not state.dragEnabled then return end
         if state.sliderDragging then return end
-        if colorModal or teamModal or espColorModal then return end
+        if colorModal then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -1778,7 +1691,6 @@ end
 
 Ryze.ui.window = { create = createUI }
 
--- ============ LOOPS FINAIS ============
 local fpsAccum, fpsFrames = 0, 0
 RunService.RenderStepped:Connect(function(dt)
     if silentCfg.active then
@@ -1862,7 +1774,7 @@ UIS.InputEnded:Connect(function(input)
         if silentCfg.triggerMode == "HOLD" then
             state.silentHeld = false
             restoreSilentShot()
-            if silentCfg.lockOnShoot then
+            if silentCfg.lockOnShot then
                 state.silentLocked = false
                 state.silentLockedTarget = nil
                 state.silentLockedPart = nil
@@ -1876,7 +1788,6 @@ Ryze.Services.Players.PlayerRemoving:Connect(function(plr)
     removeEspFor(plr)
 end)
 
--- ============ INIT PRINCIPAL ============
 function Ryze.init()
     if Ryze.features and Ryze.features.hooks then
         pcall(Ryze.features.hooks.apply)
