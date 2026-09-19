@@ -1876,4 +1876,13 @@ Ryze.Services.Players.PlayerRemoving:Connect(function(plr)
     removeEspFor(plr)
 end)
 
+-- ============ INIT PRINCIPAL ============
+function Ryze.init()
+    if Ryze.features and Ryze.features.hooks then
+        pcall(Ryze.features.hooks.apply)
+    end
+    createUI()
+    print("[Ryze] Menu carregado com sucesso.")
+end
+
 return Ryze
