@@ -217,20 +217,17 @@ local function updateSilentFovPosition()
 end
 
 local function stopSilentFovLoop()
-    if state.silentFovThread then task.cancel(state.silentFovThread) end
-    state.silentFovThread = nil
+    pcall(function() RunService:UnbindFromRenderStep("RyzeSilentFov") end)
 end
 
 local function startSilentFovLoop()
     stopSilentFovLoop()
-    state.silentFovThread = task.spawn(function()
-        local rot = 0
-        while ui.silentFovImage and ui.silentFovImage.Parent do
-            local dt = RunService.RenderStepped:Wait()
-            updateSilentFovPosition()
-            rot = (rot + C.FOV_ROT_SPEED * dt) % 360
-            ui.silentFovImage.Rotation = rot > 180 and (rot - 360) or rot
-        end
+    local rot = 0
+    RunService:BindToRenderStep("RyzeSilentFov", Enum.RenderPriority.Camera.Value + 2, function(dt)
+        if not ui.silentFovImage or not ui.silentFovImage.Parent then return end
+        updateSilentFovPosition()
+        rot = (rot + C.FOV_ROT_SPEED * dt) % 360
+        ui.silentFovImage.Rotation = rot > 180 and (rot - 360) or rot
     end)
 end
 
@@ -268,35 +265,32 @@ local function bestTarget(cfg, useMouseCenter)
 end
 
 local function startAimbot()
-    if state.aimbotThread then task.cancel(state.aimbotThread) end
-    state.aimbotThread = task.spawn(function()
-        while aimbotCfg.active and ui.gui and ui.gui.Parent do
-            RunService.RenderStepped:Wait()
-            if not state.silentShotFrame then
-                pcall(function()
-                    local t, tp = bestTarget(aimbotCfg, false)
-                    if t and tp and isAlive(t) then
-                        local cam = workspace.CurrentCamera
-                        if cam then
-                            local targetCF = CFrame.lookAt(cam.CFrame.Position, tp.Position)
-                            if aimbotCfg.smooth <= 0.001 then
-                                cam.CFrame = targetCF
-                            else
-                                local a = math.clamp(1 - aimbotCfg.smooth, 0.05, 1)
-                                cam.CFrame = cam.CFrame:Lerp(targetCF, a)
-                            end
-                        end
+    pcall(function() RunService:UnbindFromRenderStep("RyzeAimbot") end)
+    RunService:BindToRenderStep("RyzeAimbot", Enum.RenderPriority.Camera.Value - 1, function()
+        if not aimbotCfg.active then return end
+        if not ui.gui or not ui.gui.Parent then return end
+        if state.silentShotFrame then return end
+        pcall(function()
+            local t, tp = bestTarget(aimbotCfg, false)
+            if t and tp and isAlive(t) then
+                local cam = workspace.CurrentCamera
+                if cam then
+                    local targetCF = CFrame.lookAt(cam.CFrame.Position, tp.Position)
+                    if aimbotCfg.smooth <= 0.001 then
+                        cam.CFrame = targetCF
+                    else
+                        local a = math.clamp(1 - aimbotCfg.smooth, 0.05, 1)
+                        cam.CFrame = cam.CFrame:Lerp(targetCF, a)
                     end
-                end)
+                end
             end
-        end
+        end)
     end)
 end
 
 local function stopAimbot()
     if ui.aimbotFovImage then ui.aimbotFovImage:Destroy(); ui.aimbotFovImage = nil end
-    if state.aimbotThread then task.cancel(state.aimbotThread) end
-    state.aimbotThread = nil
+    pcall(function() RunService:UnbindFromRenderStep("RyzeAimbot") end)
 end
 Ryze.startAimbot = startAimbot
 Ryze.stopAimbot = stopAimbot
@@ -369,26 +363,24 @@ local function restoreSilentShot()
 end
 
 local function startSilent()
-    if state.silentLoop then task.cancel(state.silentLoop) end
-    state.silentLoop = task.spawn(function()
-        while silentCfg.active and ui.gui and ui.gui.Parent do
-            RunService.RenderStepped:Wait()
-            if state.silentHeld then
-                if not state.silentShotFrame then
-                    applySilentShot()
-                end
-            else
-                if state.silentShotFrame then
-                    restoreSilentShot()
-                end
+    pcall(function() RunService:UnbindFromRenderStep("RyzeSilentLoop") end)
+    RunService:BindToRenderStep("RyzeSilentLoop", Enum.RenderPriority.Camera.Value - 2, function()
+        if not silentCfg.active then return end
+        if not ui.gui or not ui.gui.Parent then return end
+        if state.silentHeld then
+            if not state.silentShotFrame then
+                applySilentShot()
+            end
+        else
+            if state.silentShotFrame then
+                restoreSilentShot()
             end
         end
     end)
 end
 
 local function stopSilent()
-    if state.silentLoop then task.cancel(state.silentLoop) end
-    state.silentLoop = nil
+    pcall(function() RunService:UnbindFromRenderStep("RyzeSilentLoop") end)
     state.silentHeld = false
     state.silentLocked = false
     state.silentLockedTarget = nil
@@ -591,6 +583,7 @@ local function removeLinesOfData(data)
         end
     end
     data.skeletonLines = nil
+    data.lastBones = nil
 end
 
 local function clearEspData()
@@ -608,6 +601,7 @@ local function createEspFor(plr)
         skeletonLines = createSkeletonLines(),
         lastRig = nil,
         lastChar = nil,
+        lastBones = nil,
     }
 end
 
@@ -628,6 +622,8 @@ local function getSkeletonColor(plr)
     return espCfg.skeletonColor
 end
 
+local BONE_LERP = 0.5
+
 local function updateEspFor(plr)
     local data = espData[plr]
     if not data then return end
@@ -641,6 +637,7 @@ local function updateEspFor(plr)
         data.skeletonLines = createSkeletonLines()
         data.lastRig = nil
         data.lastChar = char
+        data.lastBones = nil
     end
 
     if not data.skeletonLines then
@@ -666,6 +663,7 @@ local function updateEspFor(plr)
     end
 
     if not visible then
+        data.lastBones = nil
         for _, l in ipairs(data.skeletonLines) do
             if l then pcall(function() l.Visible = false end) end
         end
@@ -674,6 +672,7 @@ local function updateEspFor(plr)
 
     local rig = getRigType(char)
     if not rig then
+        data.lastBones = nil
         for _, l in ipairs(data.skeletonLines) do
             if l then pcall(function() l.Visible = false end) end
         end
@@ -684,11 +683,29 @@ local function updateEspFor(plr)
         removeLinesOfData(data)
         data.skeletonLines = createSkeletonLines()
         data.lastRig = rig
+        data.lastBones = nil
     end
 
     if not cam then return end
 
-    local bones = getBones(char, cam, rig)
+    local rawBones = getBones(char, cam, rig)
+    local smoothBones = {}
+    if data.lastBones then
+        for name, pos in pairs(rawBones) do
+            local prev = data.lastBones[name]
+            if prev then
+                smoothBones[name] = prev:Lerp(pos, BONE_LERP)
+            else
+                smoothBones[name] = pos
+            end
+        end
+    else
+        for name, pos in pairs(rawBones) do
+            smoothBones[name] = pos
+        end
+    end
+    data.lastBones = smoothBones
+
     local connections = (rig == "R15") and R15_CONNECTIONS or R6_CONNECTIONS
     local color = getSkeletonColor(plr)
     local maxLineLen = cam.ViewportSize.X * 0.5
@@ -696,8 +713,8 @@ local function updateEspFor(plr)
     local i = 1
     for _, conn in ipairs(connections) do
         if i > #data.skeletonLines then break end
-        local a = bones[conn[1]]
-        local b = bones[conn[2]]
+        local a = smoothBones[conn[1]]
+        local b = smoothBones[conn[2]]
         local line = data.skeletonLines[i]
         if line then
             if a and b then
@@ -724,30 +741,26 @@ local function updateEspFor(plr)
 end
 
 local function startEspLoop()
-    if state.espThread then task.cancel(state.espThread) end
-    state.espThread = task.spawn(function()
-        while espCfg.active and espCfg.skeleton do
-            RunService.RenderStepped:Wait()
-            for _, plr in ipairs(game.Players:GetPlayers()) do
-                if plr ~= player and isAlive(plr.Character) then
-                    if not espData[plr] then createEspFor(plr) end
-                end
-            end
-            for plr in pairs(espData) do
-                if plr.Parent == nil or plr == player then
-                    removeEspFor(plr)
-                else
-                    updateEspFor(plr)
-                end
+    pcall(function() RunService:UnbindFromRenderStep("RyzeEsp") end)
+    RunService:BindToRenderStep("RyzeEsp", Enum.RenderPriority.Camera.Value + 1, function()
+        if not espCfg.active or not espCfg.skeleton then return end
+        for _, plr in ipairs(game.Players:GetPlayers()) do
+            if plr ~= player and isAlive(plr.Character) then
+                if not espData[plr] then createEspFor(plr) end
             end
         end
-        clearEspData()
+        for plr in pairs(espData) do
+            if plr.Parent == nil or plr == player then
+                removeEspFor(plr)
+            else
+                updateEspFor(plr)
+            end
+        end
     end)
 end
 
 local function stopEspLoop()
-    if state.espThread then task.cancel(state.espThread) end
-    state.espThread = nil
+    pcall(function() RunService:UnbindFromRenderStep("RyzeEsp") end)
     clearEspData()
 end
 Ryze.startEspLoop = startEspLoop
@@ -2652,18 +2665,16 @@ end
 local function showLoadscreen(onDone)
     local parent = ui.mainFrame
     if not parent then
-        onDone()
+        if onDone then onDone() end
         return
     end
-
-    parent.Visible = false
 
     local overlay = new("Frame", {
         Name = "RyzeLoadscreen",
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = Theme.bg,
         BorderSizePixel = 0,
-        ZIndex = 50,
+        ZIndex = 300,
         Parent = parent,
     })
     Ryze.asymmetricCorner(overlay, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
@@ -2671,13 +2682,13 @@ local function showLoadscreen(onDone)
     local center = new("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        ZIndex = 51,
+        ZIndex = 301,
         Parent = overlay,
     })
 
     new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 70),
-        Position = UDim2.new(0, 0, 0.5, -60),
+        Position = UDim2.new(0, 0, 0.5, -70),
         BackgroundTransparency = 1,
         Text = "Ryze",
         TextColor3 = Color3.fromRGB(245, 245, 255),
@@ -2685,41 +2696,41 @@ local function showLoadscreen(onDone)
         Font = Enum.Font.GothamBlack,
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 52,
+        ZIndex = 302,
         Parent = center,
     })
 
     local underline = new("Frame", {
         Size = UDim2.new(0, 0, 0, 3),
-        Position = UDim2.new(0.5, 0, 0.5, 10),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0),
         BackgroundColor3 = Ryze.accentColor,
         BorderSizePixel = 0,
-        ZIndex = 52,
+        ZIndex = 302,
         Parent = center,
     })
     corner(underline, 2)
 
     local subtitle = new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 0.5, 24),
+        Position = UDim2.new(0, 0, 0.5, 14),
         BackgroundTransparency = 1,
         Text = "Inicializando...",
         TextColor3 = Color3.fromRGB(150, 150, 170),
         TextSize = 13,
         Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 52,
+        ZIndex = 302,
         Parent = center,
     })
 
     local barBg = new("Frame", {
         Size = UDim2.new(0, 260, 0, 4),
-        Position = UDim2.new(0.5, 0, 0.5, 60),
+        Position = UDim2.new(0.5, 0, 0.5, 50),
         AnchorPoint = Vector2.new(0.5, 0),
         BackgroundColor3 = Color3.fromRGB(30, 30, 40),
         BorderSizePixel = 0,
-        ZIndex = 52,
+        ZIndex = 302,
         Parent = center,
     })
     corner(barBg, 2)
@@ -2728,21 +2739,21 @@ local function showLoadscreen(onDone)
         Size = UDim2.new(0, 0, 1, 0),
         BackgroundColor3 = Ryze.accentColor,
         BorderSizePixel = 0,
-        ZIndex = 53,
+        ZIndex = 303,
         Parent = barBg,
     })
     corner(barFill, 2)
 
     local percent = new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 18),
-        Position = UDim2.new(0, 0, 0.5, 74),
+        Position = UDim2.new(0, 0, 0.5, 64),
         BackgroundTransparency = 1,
         Text = "0%",
         TextColor3 = Ryze.accentColor,
         TextSize = 12,
         Font = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 52,
+        ZIndex = 302,
         Parent = center,
     })
 
@@ -2790,8 +2801,7 @@ local function showLoadscreen(onDone)
                 end
             end
             task.wait(0.4)
-            overlay:Destroy()
-            parent.Visible = true
+            if overlay and overlay.Parent then overlay:Destroy() end
             if onDone then onDone() end
         end
     end)
