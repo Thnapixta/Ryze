@@ -757,6 +757,7 @@ local colorModal
 local espColorModal
 local configModal
 local viewModal
+local teamModal
 
 local function closeModal(m, w, h)
     if not m then return end
@@ -771,7 +772,15 @@ local function closeModal(m, w, h)
     task.delay(0.18, function() if m and m.Parent then m:Destroy() end end)
 end
 
-local openColorModal = function()
+local function refreshTeamButton()
+    if uiSync.teamCountBtn then
+        local count = 0
+        for _ in pairs(teamCheckCfg.manualPlayers) do count = count + 1 end
+        uiSync.teamCountBtn.Text = tostring(count)
+    end
+end
+
+local function openColorModal()
     if colorModal then return end
     colorModal = new("Frame", {
         Name = "ColorModal",
@@ -895,7 +904,7 @@ end
 
 Ryze.openColorModal = openColorModal
 
-local openEspColorModal = function(current, onPick)
+local function openEspColorModal(current, onPick)
     if espColorModal then return end
     espColorModal = new("Frame", {
         Name = "EspColorModal",
@@ -994,7 +1003,7 @@ local openEspColorModal = function(current, onPick)
             BackgroundTransparency = 1, ZIndex = 514, Parent = sw,
         })
         corner(ring, 9999)
-        local innerStroke = new("UIStroke", {
+        new("UIStroke", {
             Color = Color3.fromRGB(20, 20, 27), Thickness = 2,
             Transparency = (entry.color == current) and 0 or 1,
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ring,
@@ -1010,6 +1019,238 @@ local openEspColorModal = function(current, onPick)
 end
 
 Ryze.openEspColorModal = openEspColorModal
+
+local function openTeamModal()
+    if teamModal then return end
+    teamModal = new("Frame", {
+        Name = "TeamModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 510, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(teamModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 510, Parent = teamModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = teamModal; teamModal = nil
+        closeModal(m, 380, 60)
+    end)
+    TweenService:Create(teamModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 380, 0, 60),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 511, ClipsDescendants = true,
+        Parent = teamModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 380, 0, 400), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 512, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "Manage Team Players",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 513, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 513, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = teamModal; teamModal = nil
+        closeModal(m, 380, 60)
+    end)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -32, 0, 16),
+        Position = UDim2.new(0, 16, 0, 52),
+        BackgroundTransparency = 1,
+        Text = "Clique nos jogadores que voce quer marcar como aliados.",
+        TextColor3 = Theme.textDim,
+        TextSize = 10,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 512, Parent = content,
+    })
+
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 74),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 512, Parent = content,
+    })
+
+    local listHolder = new("ScrollingFrame", {
+        Size = UDim2.new(1, -32, 1, -92),
+        Position = UDim2.new(0, 16, 0, 82),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
+        ScrollBarImageTransparency = 0.4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Name = "accentScroll", ZIndex = 512, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+        Parent = listHolder,
+    })
+
+    local function createPlayerRow(plr, index)
+        local isSelf = (plr == player)
+        local selected = teamCheckCfg.manualPlayers[plr] == true or isSelf
+
+        local row = new("TextButton", {
+            Size = UDim2.new(1, -8, 0, 44),
+            BackgroundColor3 = selected and Theme.hover or Theme.card,
+            BackgroundTransparency = selected and 0 or 0.3,
+            Text = "",
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            LayoutOrder = index,
+            ZIndex = 513, Parent = listHolder,
+        })
+        corner(row, 6)
+        stroke(row, Theme.cardBorder, 1, 0.4)
+
+        local thumb = new("ImageLabel", {
+            Size = UDim2.new(0, 32, 0, 32),
+            Position = UDim2.new(0, 8, 0.5, -16),
+            BackgroundColor3 = Theme.sidebar,
+            BorderSizePixel = 0,
+            Image = "",
+            ZIndex = 514, Parent = row,
+        })
+        corner(thumb, 16)
+        stroke(thumb, Theme.cardBorder, 1, 0.5)
+
+        task.spawn(function()
+            local ok, image = pcall(function()
+                return game:GetService("Players"):GetUserThumbnailAsync(
+                    plr.UserId,
+                    Enum.ThumbnailType.HeadShot,
+                    Enum.ThumbnailSize.Size60x60
+                )
+            end)
+            if ok and image and thumb and thumb.Parent then
+                thumb.Image = image
+            end
+        end)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -110, 1, 0),
+            Position = UDim2.new(0, 48, 0, 0),
+            BackgroundTransparency = 1,
+            Text = plr.DisplayName .. "  @" .. plr.Name .. (isSelf and "  (Voce)" or ""),
+            TextColor3 = Theme.text,
+            TextSize = 12,
+            Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 514, Parent = row,
+        })
+
+        local checkHolder = new("Frame", {
+            Size = UDim2.new(0, 22, 0, 22),
+            Position = UDim2.new(1, -30, 0.5, -11),
+            BackgroundColor3 = selected and Ryze.accentColor or Theme.switchOff,
+            BorderSizePixel = 0,
+            ZIndex = 514, Parent = row,
+        })
+        corner(checkHolder, 6)
+        stroke(checkHolder, Theme.cardBorder, 1, 0.3)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "✓",
+            TextColor3 = getContrastColor(selected and Ryze.accentColor or Theme.switchOff),
+            TextSize = 14,
+            Font = Enum.Font.GothamBold,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTransparency = selected and 0 or 1,
+            ZIndex = 515, Parent = checkHolder,
+        })
+
+        hookHover(row)
+        row.MouseEnter:Connect(function()
+            if not selected then
+                tween(row, {BackgroundColor3 = Theme.hover, BackgroundTransparency = 0})
+            end
+        end)
+        row.MouseLeave:Connect(function()
+            if not selected then
+                tween(row, {BackgroundColor3 = Theme.card, BackgroundTransparency = 0.3})
+            end
+        end)
+
+        row.MouseButton1Click:Connect(function()
+            playHover()
+            if isSelf then return end
+            selected = not selected
+            if selected then
+                teamCheckCfg.manualPlayers[plr] = true
+            else
+                teamCheckCfg.manualPlayers[plr] = nil
+            end
+            tween(row, {
+                BackgroundColor3 = selected and Theme.hover or Theme.card,
+                BackgroundTransparency = selected and 0 or 0.3,
+            })
+            tween(checkHolder, {BackgroundColor3 = selected and Ryze.accentColor or Theme.switchOff})
+            local lbl = checkHolder:FindFirstChildOfClass("TextLabel")
+            if lbl then
+                lbl.TextColor3 = getContrastColor(selected and Ryze.accentColor or Theme.switchOff)
+                lbl.TextTransparency = selected and 0 or 1
+            end
+            refreshTeamButton()
+        end)
+    end
+
+    local players = {}
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        table.insert(players, p)
+    end
+    table.sort(players, function(a, b)
+        if a == player then return true end
+        if b == player then return false end
+        return a.Name:lower() < b.Name:lower()
+    end)
+
+    for i, p in ipairs(players) do
+        createPlayerRow(p, i)
+    end
+end
+
+Ryze.openTeamModal = openTeamModal
 
 local function collectConfig()
     return {
@@ -1963,14 +2204,76 @@ pageBuilders.Aimbot.TeamCheck = function(parent)
     end)
     uiSync.teamManual = setManual
 
-    local card2 = makeCard(sf, "Info", 1)
+    local card2 = makeCard(sf, "Manage Team", 1)
+    local manageRow = new("Frame", {
+        Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT + 4),
+        BackgroundTransparency = 1,
+        LayoutOrder = nextOrder(card2),
+        Parent = card2,
+    })
+    local manageBtn = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Theme.hover,
+        Text = "",
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = manageRow,
+    })
+    corner(manageBtn, 8)
+    stroke(manageBtn, Theme.cardBorder, 1, 0.3)
+    hookHover(manageBtn)
+    manageBtn.MouseEnter:Connect(function() tween(manageBtn, {BackgroundColor3 = Theme.cardBorder}) end)
+    manageBtn.MouseLeave:Connect(function() tween(manageBtn, {BackgroundColor3 = Theme.hover}) end)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Manage Team Players",
+        TextColor3 = Theme.text,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = manageBtn,
+    })
+
+    local countBadge = new("Frame", {
+        Size = UDim2.new(0, 26, 0, 20),
+        Position = UDim2.new(1, -38, 0.5, -10),
+        BackgroundColor3 = Ryze.accentColor,
+        BorderSizePixel = 0,
+        Parent = manageBtn,
+    })
+    corner(countBadge, 10)
+    uiSync.teamCountBg = countBadge
+
+    local countLbl = new("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "0",
+        TextColor3 = getContrastColor(Ryze.accentColor),
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Parent = countBadge,
+    })
+    uiSync.teamCountBtn = countLbl
+    refreshTeamButton()
+
+    manageBtn.MouseButton1Click:Connect(function()
+        playHover()
+        if Ryze.openTeamModal then Ryze.openTeamModal() end
+    end)
+
+    local card3 = makeCard(sf, "Info", 1)
     new("TextLabel", {
         Size = UDim2.new(1, 0, 0, C.ROW_HEIGHT - 2),
         BackgroundTransparency = 1,
-        Text = "Auto usa TeamColor. Manual usa lista salva em configs.",
+        Text = "Auto usa TeamColor. Manual usa a lista que voce escolher.",
         TextColor3 = Theme.textDim, TextSize = 11,
         Font = Enum.Font.Gotham, TextWrapped = true,
-        LayoutOrder = nextOrder(card2), Parent = card2,
+        LayoutOrder = nextOrder(card3), Parent = card3,
     })
 end
 
@@ -2347,84 +2650,76 @@ local function selectCategory(idx)
 end
 
 local function showLoadscreen(onDone)
-    local gui = new("ScreenGui", {
+    local parent = ui.mainFrame
+    if not parent then
+        onDone()
+        return
+    end
+
+    parent.Visible = false
+
+    local overlay = new("Frame", {
         Name = "RyzeLoadscreen",
-        IgnoreGuiInset = true,
-        ResetOnSpawn = false,
-        DisplayOrder = 10000,
-        Parent = player:WaitForChild("PlayerGui"),
-    })
-
-    local bg = new("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(8, 8, 12),
+        BackgroundColor3 = Theme.bg,
         BorderSizePixel = 0,
-        ZIndex = 1,
-        Parent = gui,
+        ZIndex = 50,
+        Parent = parent,
     })
-
-    local vignette = new("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.6,
-        BorderSizePixel = 0,
-        ZIndex = 2,
-        Parent = gui,
-    })
+    Ryze.asymmetricCorner(overlay, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
 
     local center = new("Frame", {
-        Size = UDim2.new(0, 400, 0, 200),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        ZIndex = 3,
-        Parent = gui,
+        ZIndex = 51,
+        Parent = overlay,
     })
 
     new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 70),
+        Position = UDim2.new(0, 0, 0.5, -60),
         BackgroundTransparency = 1,
         Text = "Ryze",
         TextColor3 = Color3.fromRGB(245, 245, 255),
-        TextSize = 56,
+        TextSize = 48,
         Font = Enum.Font.GothamBlack,
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 4,
+        ZIndex = 52,
         Parent = center,
     })
 
     local underline = new("Frame", {
         Size = UDim2.new(0, 0, 0, 3),
-        Position = UDim2.new(0.5, 0, 0, 74),
+        Position = UDim2.new(0.5, 0, 0.5, 10),
         AnchorPoint = Vector2.new(0.5, 0),
         BackgroundColor3 = Ryze.accentColor,
         BorderSizePixel = 0,
-        ZIndex = 4,
+        ZIndex = 52,
         Parent = center,
     })
     corner(underline, 2)
 
     local subtitle = new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 0, 90),
+        Position = UDim2.new(0, 0, 0.5, 24),
         BackgroundTransparency = 1,
         Text = "Inicializando...",
         TextColor3 = Color3.fromRGB(150, 150, 170),
         TextSize = 13,
         Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 4,
+        ZIndex = 52,
         Parent = center,
     })
 
     local barBg = new("Frame", {
-        Size = UDim2.new(0, 320, 0, 4),
-        Position = UDim2.new(0.5, 0, 0, 130),
+        Size = UDim2.new(0, 260, 0, 4),
+        Position = UDim2.new(0.5, 0, 0.5, 60),
         AnchorPoint = Vector2.new(0.5, 0),
         BackgroundColor3 = Color3.fromRGB(30, 30, 40),
         BorderSizePixel = 0,
-        ZIndex = 4,
+        ZIndex = 52,
         Parent = center,
     })
     corner(barBg, 2)
@@ -2433,21 +2728,21 @@ local function showLoadscreen(onDone)
         Size = UDim2.new(0, 0, 1, 0),
         BackgroundColor3 = Ryze.accentColor,
         BorderSizePixel = 0,
-        ZIndex = 5,
+        ZIndex = 53,
         Parent = barBg,
     })
     corner(barFill, 2)
 
     local percent = new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 18),
-        Position = UDim2.new(0, 0, 0, 145),
+        Position = UDim2.new(0, 0, 0.5, 74),
         BackgroundTransparency = 1,
         Text = "0%",
         TextColor3 = Ryze.accentColor,
         TextSize = 12,
         Font = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 4,
+        ZIndex = 52,
         Parent = center,
     })
 
@@ -2460,10 +2755,10 @@ local function showLoadscreen(onDone)
     }
 
     TweenService:Create(underline, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 260, 0, 3),
+        Size = UDim2.new(0, 220, 0, 3),
     }):Play()
 
-    local total = 2.4
+    local total = 2.2
     local elapsed = 0
     local lastStep = 0
 
@@ -2485,21 +2780,18 @@ local function showLoadscreen(onDone)
 
         if p >= 1 then
             if conn then conn:Disconnect() end
-            task.wait(0.35)
-            TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-            TweenService:Create(vignette, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-            TweenService:Create(center, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                Position = UDim2.new(0.5, 0, 0.5, 40),
-            }):Play()
+            task.wait(0.25)
+            TweenService:Create(overlay, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
             for _, child in ipairs(center:GetDescendants()) do
                 if child:IsA("TextLabel") then
-                    TweenService:Create(child, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+                    TweenService:Create(child, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
                 elseif child:IsA("Frame") then
-                    TweenService:Create(child, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+                    TweenService:Create(child, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
                 end
             end
-            task.wait(0.55)
-            gui:Destroy()
+            task.wait(0.4)
+            overlay:Destroy()
+            parent.Visible = true
             if onDone then onDone() end
         end
     end)
@@ -2633,7 +2925,7 @@ local function createUI()
     ui.mainFrame.InputBegan:Connect(function(input)
         if not state.dragEnabled then return end
         if state.sliderDragging then return end
-        if colorModal or configModal or viewModal or espColorModal then return end
+        if colorModal or configModal or viewModal or espColorModal or teamModal then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -2758,14 +3050,15 @@ end)
 Ryze.Services.Players.PlayerRemoving:Connect(function(plr)
     teamCheckCfg.manualPlayers[plr] = nil
     removeEspFor(plr)
+    refreshTeamButton()
 end)
 
 function Ryze.init()
     if Ryze.features and Ryze.features.hooks then
         pcall(Ryze.features.hooks.apply)
     end
+    createUI()
     showLoadscreen(function()
-        createUI()
         print("[Ryze] Menu carregado com sucesso.")
     end)
 end
