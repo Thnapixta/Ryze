@@ -753,6 +753,773 @@ end
 Ryze.startEspLoop = startEspLoop
 Ryze.stopEspLoop = stopEspLoop
 
+local colorModal
+local espColorModal
+local configModal
+local viewModal
+
+local function closeModal(m, w, h)
+    if not m then return end
+    TweenService:Create(m, TweenInfo.new(0.15), {BackgroundTransparency = 1}):Play()
+    for _, child in ipairs(m:GetDescendants()) do
+        if child:IsA("Frame") and child.Name == "modalContent" then
+            TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, w, 0, h), BackgroundTransparency = 1,
+            }):Play()
+        end
+    end
+    task.delay(0.18, function() if m and m.Parent then m:Destroy() end end)
+end
+
+local openColorModal = function()
+    if colorModal then return end
+    colorModal = new("Frame", {
+        Name = "ColorModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 500, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(colorModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 500, Parent = colorModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = colorModal; colorModal = nil
+        closeModal(m, 320, 70)
+    end)
+    TweenService:Create(colorModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 320, 0, 70),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 501, ClipsDescendants = true,
+        Parent = colorModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 320, 0, 300), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 502, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "Accent Color",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 503, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 503, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = colorModal; colorModal = nil
+        closeModal(m, 320, 70)
+    end)
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 52),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 502, Parent = content,
+    })
+    local holder = new("Frame", {
+        Size = UDim2.new(1, -32, 1, -74),
+        Position = UDim2.new(0, 16, 0, 66),
+        BackgroundTransparency = 1, ZIndex = 502, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 12),
+        FillDirection = Enum.FillDirection.Horizontal,
+        Wraps = true, Parent = holder,
+    })
+    local swatchSize = 28
+    for i, entry in ipairs(Ryze.colorPalette) do
+        local sw = new("TextButton", {
+            Size = UDim2.new(0, swatchSize, 0, swatchSize),
+            BackgroundColor3 = entry.color,
+            Text = "", BorderSizePixel = 0,
+            LayoutOrder = i, AutoButtonColor = false,
+            ZIndex = 503, Parent = holder,
+        })
+        corner(sw, swatchSize / 2)
+        stroke(sw, Color3.fromRGB(60, 60, 70), 1.5, 0.4)
+        local ring = new("Frame", {
+            Size = UDim2.new(1, -12, 1, -12),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundTransparency = 1, ZIndex = 504, Parent = sw,
+        })
+        corner(ring, 9999)
+        local innerStroke = new("UIStroke", {
+            Color = Color3.fromRGB(20, 20, 27), Thickness = 2,
+            Transparency = (entry.color == Ryze.accentColor) and 0 or 1,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ring,
+        })
+        hookHover(sw)
+        sw.MouseButton1Click:Connect(function()
+            playHover()
+            Ryze.applyAccent(entry.color)
+            for _, other in ipairs(holder:GetChildren()) do
+                if other:IsA("TextButton") then
+                    local r = other:FindFirstChildOfClass("Frame")
+                    if r then
+                        local s = r:FindFirstChildOfClass("UIStroke")
+                        if s then s.Transparency = 1 end
+                    end
+                end
+            end
+            innerStroke.Transparency = 0
+        end)
+    end
+end
+
+Ryze.openColorModal = openColorModal
+
+local openEspColorModal = function(current, onPick)
+    if espColorModal then return end
+    espColorModal = new("Frame", {
+        Name = "EspColorModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 510, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(espColorModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 510, Parent = espColorModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = espColorModal; espColorModal = nil
+        closeModal(m, 320, 70)
+    end)
+    TweenService:Create(espColorModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 320, 0, 70),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 511, ClipsDescendants = true,
+        Parent = espColorModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 320, 0, 300), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 512, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "ESP Color",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 513, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 513, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = espColorModal; espColorModal = nil
+        closeModal(m, 320, 70)
+    end)
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 52),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 512, Parent = content,
+    })
+    local holder = new("Frame", {
+        Size = UDim2.new(1, -32, 1, -74),
+        Position = UDim2.new(0, 16, 0, 66),
+        BackgroundTransparency = 1, ZIndex = 512, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 12),
+        FillDirection = Enum.FillDirection.Horizontal,
+        Wraps = true, Parent = holder,
+    })
+    local swatchSize = 28
+    for i, entry in ipairs(Ryze.colorPalette) do
+        local sw = new("TextButton", {
+            Size = UDim2.new(0, swatchSize, 0, swatchSize),
+            BackgroundColor3 = entry.color,
+            Text = "", BorderSizePixel = 0,
+            LayoutOrder = i, AutoButtonColor = false,
+            ZIndex = 513, Parent = holder,
+        })
+        corner(sw, swatchSize / 2)
+        stroke(sw, Color3.fromRGB(60, 60, 70), 1.5, 0.4)
+        local ring = new("Frame", {
+            Size = UDim2.new(1, -12, 1, -12),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundTransparency = 1, ZIndex = 514, Parent = sw,
+        })
+        corner(ring, 9999)
+        local innerStroke = new("UIStroke", {
+            Color = Color3.fromRGB(20, 20, 27), Thickness = 2,
+            Transparency = (entry.color == current) and 0 or 1,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ring,
+        })
+        hookHover(sw)
+        sw.MouseButton1Click:Connect(function()
+            playHover()
+            if onPick then onPick(entry.color) end
+            local m = espColorModal; espColorModal = nil
+            closeModal(m, 320, 70)
+        end)
+    end
+end
+
+Ryze.openEspColorModal = openEspColorModal
+
+local function collectConfig()
+    return {
+        aimbot = {
+            active = aimbotCfg.active, part = aimbotCfg.part, fov = aimbotCfg.fov,
+            distance = aimbotCfg.distance, smooth = aimbotCfg.smooth,
+            showFov = aimbotCfg.showFov, wallCheck = aimbotCfg.wallCheck,
+        },
+        silent = {
+            active = silentCfg.active, part = silentCfg.part, fov = silentCfg.fov,
+            distance = silentCfg.distance, triggerMode = silentCfg.triggerMode,
+            showFov = silentCfg.showFov, mode = silentCfg.mode,
+            wallCheck = silentCfg.wallCheck, lockOnShoot = silentCfg.lockOnShoot,
+        },
+        team = {
+            active = teamCheckCfg.active, auto = teamCheckCfg.auto, manual = teamCheckCfg.manual,
+        },
+        esp = {
+            active = espCfg.active, skeleton = espCfg.skeleton,
+            skeletonThickness = espCfg.skeletonThickness,
+            skeletonColor = {espCfg.skeletonColor.R, espCfg.skeletonColor.G, espCfg.skeletonColor.B},
+            espDistance = espCfg.espDistance, rgbMode = espCfg.rgbMode, rgbSpeed = espCfg.rgbSpeed,
+        },
+        general = {
+            wallhack = state.wallhack, crosshairEnabled = state.crosshairEnabled,
+            showFps = state.showFps, menuScale = state.menuScale,
+            fovStyle = state.fovStyle, dragEnabled = state.dragEnabled,
+        },
+        binds = (function()
+            local b = {}
+            for k, v in pairs(binds) do if v then b[k] = v.Name end end
+            return b
+        end)(),
+        accent = {Ryze.accentColor.R, Ryze.accentColor.G, Ryze.accentColor.B},
+    }
+end
+
+local function applyConfig(cfg)
+    if not cfg then return false end
+    if cfg.aimbot then
+        for k, v in pairs(cfg.aimbot) do aimbotCfg[k] = v end
+        if cfg.aimbot.active then updateFov(); startAimbot() else stopAimbot() end
+    end
+    if cfg.silent then
+        for k, v in pairs(cfg.silent) do silentCfg[k] = v end
+        if cfg.silent.active then updateSilentFov(); startSilent()
+        else
+            if ui.silentFovImage then ui.silentFovImage:Destroy(); ui.silentFovImage = nil end
+            stopSilentFovLoop(); stopSilent()
+        end
+    end
+    if cfg.team then
+        for k, v in pairs(cfg.team) do teamCheckCfg[k] = v end
+    end
+    if cfg.esp then
+        espCfg.active = cfg.esp.active
+        espCfg.skeleton = cfg.esp.skeleton
+        espCfg.skeletonThickness = cfg.esp.skeletonThickness
+        espCfg.espDistance = cfg.esp.espDistance
+        espCfg.rgbMode = cfg.esp.rgbMode
+        espCfg.rgbSpeed = cfg.esp.rgbSpeed
+        if cfg.esp.skeletonColor then
+            espCfg.skeletonColor = Color3.new(
+                cfg.esp.skeletonColor[1] or 0,
+                cfg.esp.skeletonColor[2] or 1,
+                cfg.esp.skeletonColor[3] or 0
+            )
+        end
+        if espCfg.active and espCfg.skeleton then startEspLoop() else stopEspLoop() end
+    end
+    if cfg.general then
+        state.wallhack = cfg.general.wallhack
+        state.crosshairEnabled = cfg.general.crosshairEnabled
+        state.showFps = cfg.general.showFps
+        state.menuScale = cfg.general.menuScale
+        state.fovStyle = cfg.general.fovStyle
+        state.dragEnabled = cfg.general.dragEnabled
+        if ui.crosshair then ui.crosshair.Visible = state.crosshairEnabled end
+        if ui.fpsLabel then ui.fpsLabel.Visible = state.showFps end
+        if ui.uiScale then ui.uiScale.Scale = state.menuScale end
+        if uiSync.cross then uiSync.cross(state.crosshairEnabled) end
+        if uiSync.wall then uiSync.wall(state.wallhack) end
+        if uiSync.fps then uiSync.fps(state.showFps) end
+        if uiSync.drag then uiSync.drag(state.dragEnabled) end
+        updateFov()
+    end
+    if cfg.binds then
+        for k, name in pairs(cfg.binds) do
+            if name and Enum.KeyCode[name] then binds[k] = Enum.KeyCode[name] end
+        end
+    end
+    if cfg.accent then
+        Ryze.applyAccent(Color3.new(cfg.accent[1] or 1, cfg.accent[2] or 1, cfg.accent[3] or 1))
+        if uiSync.colorPreview then
+            uiSync.colorPreview.BackgroundColor3 = Ryze.accentColor
+        end
+    end
+    return true
+end
+Ryze.applyConfig = applyConfig
+
+local CONFIG_FOLDER = Ryze.CONFIG_FOLDER or "RyzeConfigs"
+
+local function ensureFolder()
+    if not isfolder or not makefolder then return false end
+    if not isfolder(CONFIG_FOLDER) then pcall(makefolder, CONFIG_FOLDER) end
+    return true
+end
+
+local function listConfigs()
+    if not ensureFolder() or not listfiles then return {} end
+    local ok, files = pcall(function() return listfiles(CONFIG_FOLDER) end)
+    if not ok or not files then return {} end
+    local names = {}
+    for _, path in ipairs(files) do
+        if type(path) == "string" and path:sub(-5) == ".json" then
+            local name = path:match("([^/\\]+)%.json$")
+            if name then table.insert(names, name) end
+        end
+    end
+    table.sort(names)
+    return names
+end
+
+local function saveConfig(name)
+    if not name or name == "" then return false end
+    if not ensureFolder() or not writefile then return false end
+    local data = collectConfig()
+    local encoded
+    local HttpS = Ryze.Services.Http
+    if HttpS then
+        local ok, e = pcall(function() return HttpS:JSONEncode(data) end)
+        if ok then encoded = e end
+    end
+    if not encoded then return false end
+    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
+    return (pcall(function() writefile(path, encoded) end))
+end
+
+local function loadConfig(name)
+    if not name or name == "" or not readfile then return false end
+    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
+    local ok, content = pcall(function() return readfile(path) end)
+    if not ok or not content then return false end
+    local data
+    local HttpS = Ryze.Services.Http
+    if HttpS then
+        local ok2, decoded = pcall(function() return HttpS:JSONDecode(content) end)
+        if ok2 then data = decoded end
+    end
+    if not data then return false end
+    return applyConfig(data)
+end
+
+local function deleteConfig(name)
+    if not name or name == "" or not delfile then return false end
+    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
+    return (pcall(function() delfile(path) end))
+end
+
+Ryze.openConfigModal = function()
+    if configModal then return end
+    configModal = new("Frame", {
+        Name = "ConfigModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 520, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(configModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 520, Parent = configModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = configModal; configModal = nil
+        closeModal(m, 340, 60)
+    end)
+    TweenService:Create(configModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 340, 0, 60),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 521, ClipsDescendants = true,
+        Parent = configModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 340, 0, 360), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 522, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "Gerenciar Configs",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 523, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 523, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = configModal; configModal = nil
+        closeModal(m, 340, 60)
+    end)
+
+    local saveRow = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 36),
+        Position = UDim2.new(0, 16, 0, 56),
+        BackgroundTransparency = 1, ZIndex = 522, Parent = content,
+    })
+    local nameBox = new("TextBox", {
+        Size = UDim2.new(1, -90, 1, 0),
+        BackgroundColor3 = Theme.hover,
+        Text = "",
+        PlaceholderText = "Nome da config...",
+        PlaceholderColor3 = Theme.textDim,
+        TextColor3 = Theme.text,
+        TextSize = 12, Font = Enum.Font.GothamMedium,
+        BorderSizePixel = 0, ClearTextOnFocus = false,
+        ZIndex = 523, Parent = saveRow,
+    })
+    corner(nameBox, 6)
+    stroke(nameBox, Theme.cardBorder, 1, 0.3)
+
+    local saveBtn = new("TextButton", {
+        Size = UDim2.new(0, 80, 1, 0),
+        Position = UDim2.new(1, -80, 0, 0),
+        BackgroundColor3 = Ryze.accentColor,
+        Text = "Salvar",
+        TextColor3 = getContrastColor(Ryze.accentColor),
+        TextSize = 12, Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 523, Parent = saveRow,
+    })
+    corner(saveBtn, 6)
+    hookHover(saveBtn)
+
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 100),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 522, Parent = content,
+    })
+
+    local listHolder = new("ScrollingFrame", {
+        Size = UDim2.new(1, -32, 1, -140),
+        Position = UDim2.new(0, 16, 0, 110),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
+        ScrollBarImageTransparency = 0.4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Name = "accentScroll", ZIndex = 522, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+        Parent = listHolder,
+    })
+
+    local function refreshList()
+        for _, c in ipairs(listHolder:GetChildren()) do
+            if not c:IsA("UIListLayout") then c:Destroy() end
+        end
+        local names = listConfigs()
+        if #names == 0 then
+            new("TextLabel", {
+                Size = UDim2.new(1, 0, 0, 40),
+                BackgroundTransparency = 1,
+                Text = "Nenhuma config salva ainda.",
+                TextColor3 = Theme.textDim,
+                TextSize = 12, Font = Enum.Font.Gotham,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                LayoutOrder = 1, ZIndex = 523,
+                Parent = listHolder,
+            })
+            return
+        end
+        for i, name in ipairs(names) do
+            local row = new("Frame", {
+                Size = UDim2.new(1, -6, 0, 40),
+                BackgroundColor3 = Theme.card,
+                BorderSizePixel = 0,
+                LayoutOrder = i, ZIndex = 523,
+                Parent = listHolder,
+            })
+            corner(row, 6)
+            stroke(row, Theme.cardBorder, 1, 0.4)
+
+            new("TextLabel", {
+                Size = UDim2.new(1, -130, 1, 0),
+                Position = UDim2.new(0, 12, 0, 0),
+                BackgroundTransparency = 1,
+                Text = name,
+                TextColor3 = Theme.text,
+                TextSize = 12, Font = Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 524, Parent = row,
+            })
+
+            local loadBtn = new("TextButton", {
+                Size = UDim2.new(0, 60, 0, 26),
+                Position = UDim2.new(1, -100, 0.5, -13),
+                BackgroundColor3 = Ryze.accentColor,
+                Text = "Carregar",
+                TextColor3 = getContrastColor(Ryze.accentColor),
+                TextSize = 11, Font = Enum.Font.GothamBold,
+                BorderSizePixel = 0, AutoButtonColor = false,
+                ZIndex = 524, Parent = row,
+            })
+            corner(loadBtn, 5)
+            hookHover(loadBtn)
+            loadBtn.MouseButton1Click:Connect(function()
+                playHover()
+                loadConfig(name)
+            end)
+
+            local delBtn = new("TextButton", {
+                Size = UDim2.new(0, 26, 0, 26),
+                Position = UDim2.new(1, -30, 0.5, -13),
+                BackgroundColor3 = Theme.hover,
+                Text = "×", TextColor3 = Theme.textDim, TextSize = 14,
+                Font = Enum.Font.GothamBold,
+                BorderSizePixel = 0, AutoButtonColor = false,
+                ZIndex = 524, Parent = row,
+            })
+            corner(delBtn, 13)
+            hookHover(delBtn)
+            delBtn.MouseEnter:Connect(function()
+                tween(delBtn, {BackgroundColor3 = Theme.danger, TextColor3 = Color3.fromRGB(255,255,255)})
+            end)
+            delBtn.MouseLeave:Connect(function()
+                tween(delBtn, {BackgroundColor3 = Theme.hover, TextColor3 = Theme.textDim})
+            end)
+            delBtn.MouseButton1Click:Connect(function()
+                playHover()
+                deleteConfig(name)
+                refreshList()
+            end)
+        end
+    end
+
+    saveBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local n = nameBox.Text
+        if n and n ~= "" then
+            if saveConfig(n) then
+                nameBox.Text = ""
+                saveBtn.Text = "Salvo!"
+                task.delay(1, function()
+                    if saveBtn and saveBtn.Parent then saveBtn.Text = "Salvar" end
+                end)
+                refreshList()
+            end
+        end
+    end)
+
+    refreshList()
+end
+
+Ryze.openCurrentConfigView = function()
+    if viewModal then return end
+    viewModal = new("Frame", {
+        Name = "ViewModal",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0, ClipsDescendants = true,
+        ZIndex = 530, Parent = ui.mainFrame,
+    })
+    Ryze.asymmetricCorner(viewModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    local overlay = new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1, Text = "",
+        AutoButtonColor = false, ZIndex = 530, Parent = viewModal,
+    })
+    overlay.MouseButton1Click:Connect(function()
+        local m = viewModal; viewModal = nil
+        closeModal(m, 340, 60)
+    end)
+    TweenService:Create(viewModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
+    local content = new("Frame", {
+        Name = "modalContent",
+        Size = UDim2.new(0, 340, 0, 60),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
+        BorderSizePixel = 0, ZIndex = 531, ClipsDescendants = true,
+        Parent = viewModal,
+    })
+    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
+    stroke(content, Theme.cardBorder, 1, 0.2)
+    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 340, 0, 360), BackgroundTransparency = 0,
+    }):Play()
+    task.wait(0.05)
+
+    local header = new("Frame", {
+        Size = UDim2.new(1, -32, 0, 30),
+        Position = UDim2.new(0, 16, 0, 16),
+        BackgroundTransparency = 1, ZIndex = 532, Parent = content,
+    })
+    new("TextLabel", {
+        Size = UDim2.new(1, -34, 1, 0),
+        BackgroundTransparency = 1, Text = "Config Atual",
+        TextColor3 = Theme.text, TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 533, Parent = header,
+    })
+    local closeBtn = new("TextButton", {
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(1, -26, 0.5, -13),
+        BackgroundColor3 = Theme.hover,
+        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0, AutoButtonColor = false,
+        ZIndex = 533, Parent = header,
+    })
+    corner(closeBtn, 13)
+    hookHover(closeBtn)
+    closeBtn.MouseButton1Click:Connect(function()
+        playHover()
+        local m = viewModal; viewModal = nil
+        closeModal(m, 340, 60)
+    end)
+
+    new("Frame", {
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 0, 56),
+        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
+        BorderSizePixel = 0, ZIndex = 532, Parent = content,
+    })
+
+    local list = new("ScrollingFrame", {
+        Size = UDim2.new(1, -32, 1, -76),
+        Position = UDim2.new(0, 16, 0, 66),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
+        ScrollBarImageTransparency = 0.4,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Name = "accentScroll", ZIndex = 532, Parent = content,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 4),
+        Parent = list,
+    })
+
+    local function addLine(text, active)
+        new("TextLabel", {
+            Size = UDim2.new(1, -6, 0, 22),
+            BackgroundTransparency = 1,
+            Text = text,
+            TextColor3 = active and Ryze.accentColor or Theme.textDim,
+            TextSize = 12, Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            LayoutOrder = nextOrder(list),
+            ZIndex = 533, Parent = list,
+        })
+    end
+
+    addLine("Aimbot: " .. (aimbotCfg.active and "LIGADO" or "desligado"), aimbotCfg.active)
+    addLine("  Parte: " .. tostring(aimbotCfg.part), false)
+    addLine("  FOV: " .. tostring(aimbotCfg.fov) .. " | Dist: " .. tostring(aimbotCfg.distance), false)
+    addLine("  Smooth: " .. string.format("%.2f", aimbotCfg.smooth) .. " | Wall: " .. tostring(aimbotCfg.wallCheck), false)
+
+    addLine("Silent: " .. (silentCfg.active and "LIGADO" or "desligado"), silentCfg.active)
+    addLine("  Modo: " .. tostring(silentCfg.mode) .. " | Trigger: " .. tostring(silentCfg.triggerMode), false)
+    addLine("  FOV: " .. tostring(silentCfg.fov) .. " | Part: " .. tostring(silentCfg.part), false)
+
+    addLine("ESP: " .. (espCfg.active and "LIGADO" or "desligado"), espCfg.active)
+    addLine("  Skeleton: " .. tostring(espCfg.skeleton) .. " | RGB: " .. tostring(espCfg.rgbMode), false)
+    addLine("  Dist: " .. tostring(espCfg.espDistance), false)
+
+    addLine("Team Check: " .. (teamCheckCfg.active and "LIGADO" or "desligado"), teamCheckCfg.active)
+    addLine("  Auto: " .. tostring(teamCheckCfg.auto) .. " | Manual: " .. tostring(teamCheckCfg.manual), false)
+
+    addLine("Wallhack: " .. (state.wallhack and "LIGADO" or "desligado"), state.wallhack)
+    addLine("Crosshair: " .. (state.crosshairEnabled and "LIGADO" or "desligado"), state.crosshairEnabled)
+    addLine("FPS counter: " .. (state.showFps and "LIGADO" or "desligado"), state.showFps)
+    addLine("Escala: " .. string.format("%.2f", state.menuScale), false)
+end
+
 local function makeScrollingPage(parent)
     local sf = new("ScrollingFrame", {
         Size = UDim2.new(1, -12, 1, -8),
@@ -1122,772 +1889,6 @@ local function makeKeybindRow(parent, label, getKey, setKey)
         end)
     end)
     return row
-end
-
-local colorModal
-local espColorModal
-local configModal
-local viewModal
-
-local function closeModal(m, w, h)
-    if not m then return end
-    TweenService:Create(m, TweenInfo.new(0.15), {BackgroundTransparency = 1}):Play()
-    for _, child in ipairs(m:GetDescendants()) do
-        if child:IsA("Frame") and child.Name == "modalContent" then
-            TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                Size = UDim2.new(0, w, 0, h), BackgroundTransparency = 1,
-            }):Play()
-        end
-    end
-    task.delay(0.18, function() if m and m.Parent then m:Destroy() end end)
-end
-
-local function openColorModal()
-    if colorModal then return end
-    colorModal = new("Frame", {
-        Name = "ColorModal",
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0, ClipsDescendants = true,
-        ZIndex = 500, Parent = ui.mainFrame,
-    })
-    Ryze.asymmetricCorner(colorModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    local overlay = new("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1, Text = "",
-        AutoButtonColor = false, ZIndex = 500, Parent = colorModal,
-    })
-    overlay.MouseButton1Click:Connect(function()
-        local m = colorModal; colorModal = nil
-        closeModal(m, 320, 70)
-    end)
-    TweenService:Create(colorModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
-    local content = new("Frame", {
-        Name = "modalContent",
-        Size = UDim2.new(0, 320, 0, 70),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
-        BorderSizePixel = 0, ZIndex = 501, ClipsDescendants = true,
-        Parent = colorModal,
-    })
-    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    stroke(content, Theme.cardBorder, 1, 0.2)
-    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 320, 0, 300), BackgroundTransparency = 0,
-    }):Play()
-    task.wait(0.05)
-    local header = new("Frame", {
-        Size = UDim2.new(1, -32, 0, 30),
-        Position = UDim2.new(0, 16, 0, 16),
-        BackgroundTransparency = 1, ZIndex = 502, Parent = content,
-    })
-    new("TextLabel", {
-        Size = UDim2.new(1, -34, 1, 0),
-        BackgroundTransparency = 1, Text = "Accent Color",
-        TextColor3 = Theme.text, TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 503, Parent = header,
-    })
-    local closeBtn = new("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -26, 0.5, -13),
-        BackgroundColor3 = Theme.hover,
-        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        ZIndex = 503, Parent = header,
-    })
-    corner(closeBtn, 13)
-    hookHover(closeBtn)
-    closeBtn.MouseButton1Click:Connect(function()
-        playHover()
-        local m = colorModal; colorModal = nil
-        closeModal(m, 320, 70)
-    end)
-    new("Frame", {
-        Size = UDim2.new(1, -32, 0, 1),
-        Position = UDim2.new(0, 16, 0, 52),
-        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
-        BorderSizePixel = 0, ZIndex = 502, Parent = content,
-    })
-    local holder = new("Frame", {
-        Size = UDim2.new(1, -32, 1, -74),
-        Position = UDim2.new(0, 16, 0, 66),
-        BackgroundTransparency = 1, ZIndex = 502, Parent = content,
-    })
-    new("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 12),
-        FillDirection = Enum.FillDirection.Horizontal,
-        Wraps = true, Parent = holder,
-    })
-    local swatchSize = 28
-    for i, entry in ipairs(Ryze.colorPalette) do
-        local sw = new("TextButton", {
-            Size = UDim2.new(0, swatchSize, 0, swatchSize),
-            BackgroundColor3 = entry.color,
-            Text = "", BorderSizePixel = 0,
-            LayoutOrder = i, AutoButtonColor = false,
-            ZIndex = 503, Parent = holder,
-        })
-        corner(sw, swatchSize / 2)
-        stroke(sw, Color3.fromRGB(60, 60, 70), 1.5, 0.4)
-        local ring = new("Frame", {
-            Size = UDim2.new(1, -12, 1, -12),
-            Position = UDim2.new(0, 6, 0, 6),
-            BackgroundTransparency = 1, ZIndex = 504, Parent = sw,
-        })
-        corner(ring, 9999)
-        local innerStroke = new("UIStroke", {
-            Color = Color3.fromRGB(20, 20, 27), Thickness = 2,
-            Transparency = (entry.color == Ryze.accentColor) and 0 or 1,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ring,
-        })
-        hookHover(sw)
-        sw.MouseButton1Click:Connect(function()
-            playHover()
-            Ryze.applyAccent(entry.color)
-            for _, other in ipairs(holder:GetChildren()) do
-                if other:IsA("TextButton") then
-                    local r = other:FindFirstChildOfClass("Frame")
-                    if r then
-                        local s = r:FindFirstChildOfClass("UIStroke")
-                        if s then s.Transparency = 1 end
-                    end
-                end
-            end
-            innerStroke.Transparency = 0
-        end)
-    end
-end
-
-Ryze.openColorModal = openColorModal
-
-local function openEspColorModal(current, onPick)
-    if espColorModal then return end
-    espColorModal = new("Frame", {
-        Name = "EspColorModal",
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0, ClipsDescendants = true,
-        ZIndex = 510, Parent = ui.mainFrame,
-    })
-    Ryze.asymmetricCorner(espColorModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    local overlay = new("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1, Text = "",
-        AutoButtonColor = false, ZIndex = 510, Parent = espColorModal,
-    })
-    overlay.MouseButton1Click:Connect(function()
-        local m = espColorModal; espColorModal = nil
-        closeModal(m, 320, 70)
-    end)
-    TweenService:Create(espColorModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
-    local content = new("Frame", {
-        Name = "modalContent",
-        Size = UDim2.new(0, 320, 0, 70),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
-        BorderSizePixel = 0, ZIndex = 511, ClipsDescendants = true,
-        Parent = espColorModal,
-    })
-    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    stroke(content, Theme.cardBorder, 1, 0.2)
-    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 320, 0, 300), BackgroundTransparency = 0,
-    }):Play()
-    task.wait(0.05)
-    local header = new("Frame", {
-        Size = UDim2.new(1, -32, 0, 30),
-        Position = UDim2.new(0, 16, 0, 16),
-        BackgroundTransparency = 1, ZIndex = 512, Parent = content,
-    })
-    new("TextLabel", {
-        Size = UDim2.new(1, -34, 1, 0),
-        BackgroundTransparency = 1, Text = "ESP Color",
-        TextColor3 = Theme.text, TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 513, Parent = header,
-    })
-    local closeBtn = new("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -26, 0.5, -13),
-        BackgroundColor3 = Theme.hover,
-        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        ZIndex = 513, Parent = header,
-    })
-    corner(closeBtn, 13)
-    hookHover(closeBtn)
-    closeBtn.MouseButton1Click:Connect(function()
-        playHover()
-        local m = espColorModal; espColorModal = nil
-        closeModal(m, 320, 70)
-    end)
-    new("Frame", {
-        Size = UDim2.new(1, -32, 0, 1),
-        Position = UDim2.new(0, 16, 0, 52),
-        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
-        BorderSizePixel = 0, ZIndex = 512, Parent = content,
-    })
-    local holder = new("Frame", {
-        Size = UDim2.new(1, -32, 1, -74),
-        Position = UDim2.new(0, 16, 0, 66),
-        BackgroundTransparency = 1, ZIndex = 512, Parent = content,
-    })
-    new("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 12),
-        FillDirection = Enum.FillDirection.Horizontal,
-        Wraps = true, Parent = holder,
-    })
-    local swatchSize = 28
-    for i, entry in ipairs(Ryze.colorPalette) do
-        local sw = new("TextButton", {
-            Size = UDim2.new(0, swatchSize, 0, swatchSize),
-            BackgroundColor3 = entry.color,
-            Text = "", BorderSizePixel = 0,
-            LayoutOrder = i, AutoButtonColor = false,
-            ZIndex = 513, Parent = holder,
-        })
-        corner(sw, swatchSize / 2)
-        stroke(sw, Color3.fromRGB(60, 60, 70), 1.5, 0.4)
-        local ring = new("Frame", {
-            Size = UDim2.new(1, -12, 1, -12),
-            Position = UDim2.new(0, 6, 0, 6),
-            BackgroundTransparency = 1, ZIndex = 514, Parent = sw,
-        })
-        corner(ring, 9999)
-        local innerStroke = new("UIStroke", {
-            Color = Color3.fromRGB(20, 20, 27), Thickness = 2,
-            Transparency = (entry.color == current) and 0 or 1,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ring,
-        })
-        hookHover(sw)
-        sw.MouseButton1Click:Connect(function()
-            playHover()
-            if onPick then onPick(entry.color) end
-            local m = espColorModal; espColorModal = nil
-            closeModal(m, 320, 70)
-        end)
-    end
-end
-Ryze.openEspColorModal = openEspColorModal
-
-local function collectConfig()
-    return {
-        aimbot = {
-            active = aimbotCfg.active, part = aimbotCfg.part, fov = aimbotCfg.fov,
-            distance = aimbotCfg.distance, smooth = aimbotCfg.smooth,
-            showFov = aimbotCfg.showFov, wallCheck = aimbotCfg.wallCheck,
-        },
-        silent = {
-            active = silentCfg.active, part = silentCfg.part, fov = silentCfg.fov,
-            distance = silentCfg.distance, triggerMode = silentCfg.triggerMode,
-            showFov = silentCfg.showFov, mode = silentCfg.mode,
-            wallCheck = silentCfg.wallCheck, lockOnShoot = silentCfg.lockOnShoot,
-        },
-        team = {
-            active = teamCheckCfg.active, auto = teamCheckCfg.auto, manual = teamCheckCfg.manual,
-        },
-        esp = {
-            active = espCfg.active, skeleton = espCfg.skeleton,
-            skeletonThickness = espCfg.skeletonThickness,
-            skeletonColor = {espCfg.skeletonColor.R, espCfg.skeletonColor.G, espCfg.skeletonColor.B},
-            espDistance = espCfg.espDistance, rgbMode = espCfg.rgbMode, rgbSpeed = espCfg.rgbSpeed,
-        },
-        general = {
-            wallhack = state.wallhack, crosshairEnabled = state.crosshairEnabled,
-            showFps = state.showFps, menuScale = state.menuScale,
-            fovStyle = state.fovStyle, dragEnabled = state.dragEnabled,
-        },
-        binds = (function()
-            local b = {}
-            for k, v in pairs(binds) do if v then b[k] = v.Name end end
-            return b
-        end)(),
-        accent = {Ryze.accentColor.R, Ryze.accentColor.G, Ryze.accentColor.B},
-    }
-end
-
-local function applyConfig(cfg)
-    if not cfg then return false end
-    if cfg.aimbot then
-        for k, v in pairs(cfg.aimbot) do aimbotCfg[k] = v end
-        if cfg.aimbot.active then updateFov(); startAimbot() else stopAimbot() end
-    end
-    if cfg.silent then
-        for k, v in pairs(cfg.silent) do silentCfg[k] = v end
-        if cfg.silent.active then updateSilentFov(); startSilent()
-        else
-            if ui.silentFovImage then ui.silentFovImage:Destroy(); ui.silentFovImage = nil end
-            stopSilentFovLoop(); stopSilent()
-        end
-    end
-    if cfg.team then
-        for k, v in pairs(cfg.team) do teamCheckCfg[k] = v end
-    end
-    if cfg.esp then
-        espCfg.active = cfg.esp.active
-        espCfg.skeleton = cfg.esp.skeleton
-        espCfg.skeletonThickness = cfg.esp.skeletonThickness
-        espCfg.espDistance = cfg.esp.espDistance
-        espCfg.rgbMode = cfg.esp.rgbMode
-        espCfg.rgbSpeed = cfg.esp.rgbSpeed
-        if cfg.esp.skeletonColor then
-            espCfg.skeletonColor = Color3.new(
-                cfg.esp.skeletonColor[1] or 0,
-                cfg.esp.skeletonColor[2] or 1,
-                cfg.esp.skeletonColor[3] or 0
-            )
-        end
-        if espCfg.active and espCfg.skeleton then startEspLoop() else stopEspLoop() end
-    end
-    if cfg.general then
-        state.wallhack = cfg.general.wallhack
-        state.crosshairEnabled = cfg.general.crosshairEnabled
-        state.showFps = cfg.general.showFps
-        state.menuScale = cfg.general.menuScale
-        state.fovStyle = cfg.general.fovStyle
-        state.dragEnabled = cfg.general.dragEnabled
-        if ui.crosshair then ui.crosshair.Visible = state.crosshairEnabled end
-        if ui.fpsLabel then ui.fpsLabel.Visible = state.showFps end
-        if ui.uiScale then ui.uiScale.Scale = state.menuScale end
-        if uiSync.cross then uiSync.cross(state.crosshairEnabled) end
-        if uiSync.wall then uiSync.wall(state.wallhack) end
-        if uiSync.fps then uiSync.fps(state.showFps) end
-        if uiSync.drag then uiSync.drag(state.dragEnabled) end
-        updateFov()
-    end
-    if cfg.binds then
-        for k, name in pairs(cfg.binds) do
-            if name and Enum.KeyCode[name] then binds[k] = Enum.KeyCode[name] end
-        end
-    end
-    if cfg.accent then
-        Ryze.applyAccent(Color3.new(cfg.accent[1] or 1, cfg.accent[2] or 1, cfg.accent[3] or 1))
-        if uiSync.colorPreview then
-            uiSync.colorPreview.BackgroundColor3 = Ryze.accentColor
-        end
-    end
-    return true
-end
-Ryze.applyConfig = applyConfig
-
-local CONFIG_FOLDER = Ryze.CONFIG_FOLDER or "RyzeConfigs"
-
-local function ensureFolder()
-    if not isfolder or not makefolder then return false end
-    if not isfolder(CONFIG_FOLDER) then pcall(makefolder, CONFIG_FOLDER) end
-    return true
-end
-
-local function listConfigs()
-    if not ensureFolder() or not listfiles then return {} end
-    local ok, files = pcall(function() return listfiles(CONFIG_FOLDER) end)
-    if not ok or not files then return {} end
-    local names = {}
-    for _, path in ipairs(files) do
-        if type(path) == "string" and path:sub(-5) == ".json" then
-            local name = path:match("([^/\\]+)%.json$")
-            if name then table.insert(names, name) end
-        end
-    end
-    table.sort(names)
-    return names
-end
-
-local function saveConfig(name)
-    if not name or name == "" then return false end
-    if not ensureFolder() or not writefile then return false end
-    local data = collectConfig()
-    local encoded
-    local HttpS = Ryze.Services.Http
-    if HttpS then
-        local ok, e = pcall(function() return HttpS:JSONEncode(data) end)
-        if ok then encoded = e end
-    end
-    if not encoded then return false end
-    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
-    return (pcall(function() writefile(path, encoded) end))
-end
-
-local function loadConfig(name)
-    if not name or name == "" or not readfile then return false end
-    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
-    local ok, content = pcall(function() return readfile(path) end)
-    if not ok or not content then return false end
-    local data
-    local HttpS = Ryze.Services.Http
-    if HttpS then
-        local ok2, decoded = pcall(function() return HttpS:JSONDecode(content) end)
-        if ok2 then data = decoded end
-    end
-    if not data then return false end
-    return applyConfig(data)
-end
-
-local function deleteConfig(name)
-    if not name or name == "" or not delfile then return false end
-    local path = CONFIG_FOLDER .. "/" .. name .. ".json"
-    return (pcall(function() delfile(path) end))
-end
-
-function Ryze.openConfigModal()
-    if configModal then return end
-    configModal = new("Frame", {
-        Name = "ConfigModal",
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0, ClipsDescendants = true,
-        ZIndex = 520, Parent = ui.mainFrame,
-    })
-    Ryze.asymmetricCorner(configModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    local overlay = new("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1, Text = "",
-        AutoButtonColor = false, ZIndex = 520, Parent = configModal,
-    })
-    overlay.MouseButton1Click:Connect(function()
-        local m = configModal; configModal = nil
-        closeModal(m, 340, 60)
-    end)
-    TweenService:Create(configModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
-    local content = new("Frame", {
-        Name = "modalContent",
-        Size = UDim2.new(0, 340, 0, 60),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
-        BorderSizePixel = 0, ZIndex = 521, ClipsDescendants = true,
-        Parent = configModal,
-    })
-    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    stroke(content, Theme.cardBorder, 1, 0.2)
-    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 340, 0, 360), BackgroundTransparency = 0,
-    }):Play()
-    task.wait(0.05)
-
-    local header = new("Frame", {
-        Size = UDim2.new(1, -32, 0, 30),
-        Position = UDim2.new(0, 16, 0, 16),
-        BackgroundTransparency = 1, ZIndex = 522, Parent = content,
-    })
-    new("TextLabel", {
-        Size = UDim2.new(1, -34, 1, 0),
-        BackgroundTransparency = 1, Text = "Gerenciar Configs",
-        TextColor3 = Theme.text, TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 523, Parent = header,
-    })
-    local closeBtn = new("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -26, 0.5, -13),
-        BackgroundColor3 = Theme.hover,
-        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        ZIndex = 523, Parent = header,
-    })
-    corner(closeBtn, 13)
-    hookHover(closeBtn)
-    closeBtn.MouseButton1Click:Connect(function()
-        playHover()
-        local m = configModal; configModal = nil
-        closeModal(m, 340, 60)
-    end)
-
-    local saveRow = new("Frame", {
-        Size = UDim2.new(1, -32, 0, 36),
-        Position = UDim2.new(0, 16, 0, 56),
-        BackgroundTransparency = 1, ZIndex = 522, Parent = content,
-    })
-    local nameBox = new("TextBox", {
-        Size = UDim2.new(1, -90, 1, 0),
-        BackgroundColor3 = Theme.hover,
-        Text = "",
-        PlaceholderText = "Nome da config...",
-        PlaceholderColor3 = Theme.textDim,
-        TextColor3 = Theme.text,
-        TextSize = 12, Font = Enum.Font.GothamMedium,
-        BorderSizePixel = 0, ClearTextOnFocus = false,
-        ZIndex = 523, Parent = saveRow,
-    })
-    corner(nameBox, 6)
-    stroke(nameBox, Theme.cardBorder, 1, 0.3)
-
-    local saveBtn = new("TextButton", {
-        Size = UDim2.new(0, 80, 1, 0),
-        Position = UDim2.new(1, -80, 0, 0),
-        BackgroundColor3 = Ryze.accentColor,
-        Text = "Salvar",
-        TextColor3 = getContrastColor(Ryze.accentColor),
-        TextSize = 12, Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        ZIndex = 523, Parent = saveRow,
-    })
-    corner(saveBtn, 6)
-    hookHover(saveBtn)
-
-    new("Frame", {
-        Size = UDim2.new(1, -32, 0, 1),
-        Position = UDim2.new(0, 16, 0, 100),
-        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
-        BorderSizePixel = 0, ZIndex = 522, Parent = content,
-    })
-
-    local listHolder = new("ScrollingFrame", {
-        Size = UDim2.new(1, -32, 1, -140),
-        Position = UDim2.new(0, 16, 0, 110),
-        BackgroundTransparency = 1, BorderSizePixel = 0,
-        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
-        ScrollBarImageTransparency = 0.4,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        Name = "accentScroll", ZIndex = 522, Parent = content,
-    })
-    new("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 6),
-        Parent = listHolder,
-    })
-
-    local function refreshList()
-        for _, c in ipairs(listHolder:GetChildren()) do
-            if not c:IsA("UIListLayout") then c:Destroy() end
-        end
-        local names = listConfigs()
-        if #names == 0 then
-            new("TextLabel", {
-                Size = UDim2.new(1, 0, 0, 40),
-                BackgroundTransparency = 1,
-                Text = "Nenhuma config salva ainda.",
-                TextColor3 = Theme.textDim,
-                TextSize = 12, Font = Enum.Font.Gotham,
-                TextXAlignment = Enum.TextXAlignment.Center,
-                LayoutOrder = 1, ZIndex = 523,
-                Parent = listHolder,
-            })
-            return
-        end
-        for i, name in ipairs(names) do
-            local row = new("Frame", {
-                Size = UDim2.new(1, -6, 0, 40),
-                BackgroundColor3 = Theme.card,
-                BorderSizePixel = 0,
-                LayoutOrder = i, ZIndex = 523,
-                Parent = listHolder,
-            })
-            corner(row, 6)
-            stroke(row, Theme.cardBorder, 1, 0.4)
-
-            new("TextLabel", {
-                Size = UDim2.new(1, -130, 1, 0),
-                Position = UDim2.new(0, 12, 0, 0),
-                BackgroundTransparency = 1,
-                Text = name,
-                TextColor3 = Theme.text,
-                TextSize = 12, Font = Enum.Font.GothamMedium,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 524, Parent = row,
-            })
-
-            local loadBtn = new("TextButton", {
-                Size = UDim2.new(0, 60, 0, 26),
-                Position = UDim2.new(1, -100, 0.5, -13),
-                BackgroundColor3 = Ryze.accentColor,
-                Text = "Carregar",
-                TextColor3 = getContrastColor(Ryze.accentColor),
-                TextSize = 11, Font = Enum.Font.GothamBold,
-                BorderSizePixel = 0, AutoButtonColor = false,
-                ZIndex = 524, Parent = row,
-            })
-            corner(loadBtn, 5)
-            hookHover(loadBtn)
-            loadBtn.MouseButton1Click:Connect(function()
-                playHover()
-                loadConfig(name)
-            end)
-
-            local delBtn = new("TextButton", {
-                Size = UDim2.new(0, 26, 0, 26),
-                Position = UDim2.new(1, -30, 0.5, -13),
-                BackgroundColor3 = Theme.hover,
-                Text = "×", TextColor3 = Theme.textDim, TextSize = 14,
-                Font = Enum.Font.GothamBold,
-                BorderSizePixel = 0, AutoButtonColor = false,
-                ZIndex = 524, Parent = row,
-            })
-            corner(delBtn, 13)
-            hookHover(delBtn)
-            delBtn.MouseEnter:Connect(function()
-                tween(delBtn, {BackgroundColor3 = Theme.danger, TextColor3 = Color3.fromRGB(255,255,255)})
-            end)
-            delBtn.MouseLeave:Connect(function()
-                tween(delBtn, {BackgroundColor3 = Theme.hover, TextColor3 = Theme.textDim})
-            end)
-            delBtn.MouseButton1Click:Connect(function()
-                playHover()
-                deleteConfig(name)
-                refreshList()
-            end)
-        end
-    end
-
-    saveBtn.MouseButton1Click:Connect(function()
-        playHover()
-        local n = nameBox.Text
-        if n and n ~= "" then
-            if saveConfig(n) then
-                nameBox.Text = ""
-                saveBtn.Text = "Salvo!"
-                task.delay(1, function()
-                    if saveBtn and saveBtn.Parent then saveBtn.Text = "Salvar" end
-                end)
-                refreshList()
-            end
-        end
-    end)
-
-    refreshList()
-end
-
-function Ryze.openCurrentConfigView()
-    if viewModal then return end
-    viewModal = new("Frame", {
-        Name = "ViewModal",
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0, ClipsDescendants = true,
-        ZIndex = 530, Parent = ui.mainFrame,
-    })
-    Ryze.asymmetricCorner(viewModal, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    local overlay = new("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1, Text = "",
-        AutoButtonColor = false, ZIndex = 530, Parent = viewModal,
-    })
-    overlay.MouseButton1Click:Connect(function()
-        local m = viewModal; viewModal = nil
-        closeModal(m, 340, 60)
-    end)
-    TweenService:Create(viewModal, TweenInfo.new(0.2), {BackgroundTransparency = 0.55}):Play()
-    local content = new("Frame", {
-        Name = "modalContent",
-        Size = UDim2.new(0, 340, 0, 60),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.bg, BackgroundTransparency = 1,
-        BorderSizePixel = 0, ZIndex = 531, ClipsDescendants = true,
-        Parent = viewModal,
-    })
-    Ryze.asymmetricCorner(content, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
-    stroke(content, Theme.cardBorder, 1, 0.2)
-    TweenService:Create(content, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 340, 0, 360), BackgroundTransparency = 0,
-    }):Play()
-    task.wait(0.05)
-
-    local header = new("Frame", {
-        Size = UDim2.new(1, -32, 0, 30),
-        Position = UDim2.new(0, 16, 0, 16),
-        BackgroundTransparency = 1, ZIndex = 532, Parent = content,
-    })
-    new("TextLabel", {
-        Size = UDim2.new(1, -34, 1, 0),
-        BackgroundTransparency = 1, Text = "Config Atual",
-        TextColor3 = Theme.text, TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 533, Parent = header,
-    })
-    local closeBtn = new("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -26, 0.5, -13),
-        BackgroundColor3 = Theme.hover,
-        Text = "×", TextColor3 = Theme.textDim, TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0, AutoButtonColor = false,
-        ZIndex = 533, Parent = header,
-    })
-    corner(closeBtn, 13)
-    hookHover(closeBtn)
-    closeBtn.MouseButton1Click:Connect(function()
-        playHover()
-        local m = viewModal; viewModal = nil
-        closeModal(m, 340, 60)
-    end)
-
-    new("Frame", {
-        Size = UDim2.new(1, -32, 0, 1),
-        Position = UDim2.new(0, 16, 0, 56),
-        BackgroundColor3 = Theme.cardBorder, BackgroundTransparency = 0.5,
-        BorderSizePixel = 0, ZIndex = 532, Parent = content,
-    })
-
-    local list = new("ScrollingFrame", {
-        Size = UDim2.new(1, -32, 1, -76),
-        Position = UDim2.new(0, 16, 0, 66),
-        BackgroundTransparency = 1, BorderSizePixel = 0,
-        ScrollBarThickness = 3, ScrollBarImageColor3 = Ryze.accentColor,
-        ScrollBarImageTransparency = 0.4,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        Name = "accentScroll", ZIndex = 532, Parent = content,
-    })
-    new("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 4),
-        Parent = list,
-    })
-
-    local function addLine(text, active)
-        new("TextLabel", {
-            Size = UDim2.new(1, -6, 0, 22),
-            BackgroundTransparency = 1,
-            Text = text,
-            TextColor3 = active and Ryze.accentColor or Theme.textDim,
-            TextSize = 12, Font = Enum.Font.GothamMedium,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            LayoutOrder = nextOrder(list),
-            ZIndex = 533, Parent = list,
-        })
-    end
-
-    addLine("Aimbot: " .. (aimbotCfg.active and "LIGADO" or "desligado"), aimbotCfg.active)
-    addLine("  Parte: " .. tostring(aimbotCfg.part), false)
-    addLine("  FOV: " .. tostring(aimbotCfg.fov) .. " | Dist: " .. tostring(aimbotCfg.distance), false)
-    addLine("  Smooth: " .. string.format("%.2f", aimbotCfg.smooth) .. " | Wall: " .. tostring(aimbotCfg.wallCheck), false)
-
-    addLine("Silent: " .. (silentCfg.active and "LIGADO" or "desligado"), silentCfg.active)
-    addLine("  Modo: " .. tostring(silentCfg.mode) .. " | Trigger: " .. tostring(silentCfg.triggerMode), false)
-    addLine("  FOV: " .. tostring(silentCfg.fov) .. " | Part: " .. tostring(silentCfg.part), false)
-
-    addLine("ESP: " .. (espCfg.active and "LIGADO" or "desligado"), espCfg.active)
-    addLine("  Skeleton: " .. tostring(espCfg.skeleton) .. " | RGB: " .. tostring(espCfg.rgbMode), false)
-    addLine("  Dist: " .. tostring(espCfg.espDistance), false)
-
-    addLine("Team Check: " .. (teamCheckCfg.active and "LIGADO" or "desligado"), teamCheckCfg.active)
-    addLine("  Auto: " .. tostring(teamCheckCfg.auto) .. " | Manual: " .. tostring(teamCheckCfg.manual), false)
-
-    addLine("Wallhack: " .. (state.wallhack and "LIGADO" or "desligado"), state.wallhack)
-    addLine("Crosshair: " .. (state.crosshairEnabled and "LIGADO" or "desligado"), state.crosshairEnabled)
-    addLine("FPS counter: " .. (state.showFps and "LIGADO" or "desligado"), state.showFps)
-    addLine("Escala: " .. string.format("%.2f", state.menuScale), false)
 end
 
 local pageBuilders = {Aimbot = {}, Visual = {}, Settings = {}}
@@ -2380,7 +2381,7 @@ local function showLoadscreen(onDone)
         Parent = gui,
     })
 
-    local logo = new("TextLabel", {
+    new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 70),
         BackgroundTransparency = 1,
         Text = "Ryze",
