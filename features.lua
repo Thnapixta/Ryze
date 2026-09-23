@@ -2690,138 +2690,498 @@ local function showLoadscreen(onDone)
 
     parent.Visible = false
 
+    local accent = Ryze.accentColor
+    local accentDark = Color3.new(accent.R * 0.35, accent.G * 0.35, accent.B * 0.35)
+    local accentSoft = Color3.new(accent.R * 0.7, accent.G * 0.7, accent.B * 0.7)
+
     local overlay = new("Frame", {
         Name = "RyzeLoadscreen",
         Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Theme.bg,
+        BackgroundColor3 = Color3.fromRGB(6, 6, 10),
         BorderSizePixel = 0,
+        ClipsDescendants = true,
         ZIndex = 50,
         Parent = parent,
     })
     Ryze.asymmetricCorner(overlay, C.FRAME_RADIUS, 0, 0, C.FRAME_RADIUS)
 
-    local center = new("Frame", {
+    local gridHolder = new("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
+        ClipsDescendants = true,
         ZIndex = 51,
         Parent = overlay,
     })
 
-    new("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 70),
-        Position = UDim2.new(0, 0, 0.5, -60),
+    for i = 0, 20 do
+        local line = new("Frame", {
+            Size = UDim2.new(0, 1, 1, 0),
+            Position = UDim2.new(0, i * 40, 0, 0),
+            BackgroundColor3 = accent,
+            BackgroundTransparency = 0.94,
+            BorderSizePixel = 0,
+            ZIndex = 51,
+            Parent = gridHolder,
+        })
+    end
+    for i = 0, 14 do
+        local line = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 1),
+            Position = UDim2.new(0, 0, 0, i * 40),
+            BackgroundColor3 = accent,
+            BackgroundTransparency = 0.94,
+            BorderSizePixel = 0,
+            ZIndex = 51,
+            Parent = gridHolder,
+        })
+    end
+
+    local glow1 = new("Frame", {
+        Size = UDim2.new(0, 500, 0, 500),
+        Position = UDim2.new(0.5, -250, 0.5, -250),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.85,
+        BorderSizePixel = 0,
+        ZIndex = 52,
+        Parent = overlay,
+    })
+    corner(glow1, 9999)
+
+    local glow2 = new("Frame", {
+        Size = UDim2.new(0, 320, 0, 320),
+        Position = UDim2.new(0.5, -160, 0.5, -160),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.75,
+        BorderSizePixel = 0,
+        ZIndex = 53,
+        Parent = overlay,
+    })
+    corner(glow2, 9999)
+
+    TweenService:Create(glow1, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+        Size = UDim2.new(0, 620, 0, 620),
+        Position = UDim2.new(0.5, -310, 0.5, -310),
+        BackgroundTransparency = 0.92,
+    }):Play()
+    TweenService:Create(glow2, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+        Size = UDim2.new(0, 380, 0, 380),
+        Position = UDim2.new(0.5, -190, 0.5, -190),
+        BackgroundTransparency = 0.85,
+    }):Play()
+
+    local scan = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.new(0, 0, 0, -10),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        ZIndex = 55,
+        Parent = overlay,
+    })
+    corner(scan, 2)
+    TweenService:Create(scan, TweenInfo.new(1.6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
+        Position = UDim2.new(0, 0, 1, 10),
+        BackgroundTransparency = 0.7,
+    }):Play()
+
+    local center = new("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        Text = "Ryze",
-        TextColor3 = Color3.fromRGB(245, 245, 255),
-        TextSize = 48,
+        ZIndex = 60,
+        Parent = overlay,
+    })
+
+    local logoHolder = new("Frame", {
+        Size = UDim2.new(0, 400, 0, 130),
+        Position = UDim2.new(0.5, -200, 0.5, -110),
+        BackgroundTransparency = 1,
+        ZIndex = 61,
+        Parent = center,
+    })
+
+    local title = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 90),
+        BackgroundTransparency = 1,
+        Text = "RYZE",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 96,
         Font = Enum.Font.GothamBlack,
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 52,
-        Parent = center,
+        TextTransparency = 1,
+        ZIndex = 62,
+        Parent = logoHolder,
     })
 
-    local underline = new("Frame", {
-        Size = UDim2.new(0, 0, 0, 3),
-        Position = UDim2.new(0.5, 0, 0.5, 10),
-        AnchorPoint = Vector2.new(0.5, 0),
-        BackgroundColor3 = Ryze.accentColor,
-        BorderSizePixel = 0,
-        ZIndex = 52,
-        Parent = center,
+    local titleStroke = new("UIStroke", {
+        Thickness = 2,
+        Color = accent,
+        Transparency = 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+        Parent = title,
     })
-    corner(underline, 2)
+
+    local titleShadow = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 90),
+        Position = UDim2.new(0, 4, 0, 4),
+        BackgroundTransparency = 1,
+        Text = "RYZE",
+        TextColor3 = accentDark,
+        TextSize = 96,
+        Font = Enum.Font.GothamBlack,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTransparency = 1,
+        ZIndex = 61,
+        Parent = logoHolder,
+    })
+
+    local glowText = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 90),
+        BackgroundTransparency = 1,
+        Text = "RYZE",
+        TextColor3 = accent,
+        TextSize = 96,
+        Font = Enum.Font.GothamBlack,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTransparency = 0.85,
+        ZIndex = 60,
+        Parent = logoHolder,
+    })
+
+    TweenService:Create(title, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+    }):Play()
+    TweenService:Create(titleShadow, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0.35,
+    }):Play()
+    TweenService:Create(titleStroke, TweenInfo.new(1.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Transparency = 0.3,
+    }):Play()
+    TweenService:Create(glowText, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0.85,
+    }):Play()
+
+    TweenService:Create(logoHolder, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+        Position = UDim2.new(0.5, -200, 0.5, -116),
+    }):Play()
 
     local subtitle = new("TextLabel", {
         Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 0.5, 24),
+        Position = UDim2.new(0, 0, 0.5, 32),
         BackgroundTransparency = 1,
-        Text = "Inicializando...",
+        Text = "",
         TextColor3 = Color3.fromRGB(150, 150, 170),
-        TextSize = 13,
+        TextSize = 12,
         Font = Enum.Font.GothamMedium,
         TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 52,
+        TextTransparency = 1,
+        ZIndex = 62,
+        Parent = center,
+    })
+    TweenService:Create(subtitle, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+    }):Play()
+
+    local barHolder = new("Frame", {
+        Size = UDim2.new(0, 340, 0, 22),
+        Position = UDim2.new(0.5, -170, 0.5, 78),
+        BackgroundTransparency = 1,
+        ZIndex = 62,
         Parent = center,
     })
 
     local barBg = new("Frame", {
-        Size = UDim2.new(0, 260, 0, 4),
-        Position = UDim2.new(0.5, 0, 0.5, 60),
-        AnchorPoint = Vector2.new(0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 40),
+        Size = UDim2.new(1, 0, 0, 4),
+        Position = UDim2.new(0, 0, 0.5, -2),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 28),
         BorderSizePixel = 0,
-        ZIndex = 52,
-        Parent = center,
+        ZIndex = 62,
+        Parent = barHolder,
     })
     corner(barBg, 2)
+    new("UIStroke", {
+        Thickness = 1,
+        Color = Color3.fromRGB(40, 40, 55),
+        Transparency = 0.3,
+        Parent = barBg,
+    })
 
     local barFill = new("Frame", {
         Size = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = Ryze.accentColor,
+        BackgroundColor3 = accent,
         BorderSizePixel = 0,
-        ZIndex = 53,
+        ZIndex = 63,
         Parent = barBg,
     })
     corner(barFill, 2)
 
+    local barGlow = new("Frame", {
+        Size = UDim2.new(0, 40, 0, 10),
+        Position = UDim2.new(0, 0, 0.5, -5),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.5,
+        BorderSizePixel = 0,
+        ZIndex = 64,
+        Parent = barBg,
+    })
+    corner(barGlow, 5)
+
     local percent = new("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 18),
-        Position = UDim2.new(0, 0, 0.5, 74),
+        Size = UDim2.new(0, 60, 0, 16),
+        Position = UDim2.new(1, -60, 0, -22),
         BackgroundTransparency = 1,
         Text = "0%",
-        TextColor3 = Ryze.accentColor,
-        TextSize = 12,
+        TextColor3 = accent,
+        TextSize = 11,
         Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 52,
-        Parent = center,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        ZIndex = 63,
+        Parent = barHolder,
     })
 
-    local rotSteps = {
-        {p = 0.00, t = "Inicializando..."},
-        {p = 0.25, t = "Carregando modulos..."},
-        {p = 0.55, t = "Aplicando hooks..."},
-        {p = 0.80, t = "Preparando interface..."},
-        {p = 1.00, t = "Pronto!"},
-    }
+    local statusText = new("TextLabel", {
+        Size = UDim2.new(0, 200, 0, 16),
+        Position = UDim2.new(0, 0, 0, -22),
+        BackgroundTransparency = 1,
+        Text = "INITIALIZING",
+        TextColor3 = Color3.fromRGB(120, 120, 140),
+        TextSize = 10,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 63,
+        Parent = barHolder,
+    })
 
-    TweenService:Create(underline, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 220, 0, 3),
+    local cornerTL = new("Frame", {
+        Size = UDim2.new(0, 60, 0, 2),
+        Position = UDim2.new(0, 24, 0, 24),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerTLv = new("Frame", {
+        Size = UDim2.new(0, 2, 0, 60),
+        Position = UDim2.new(0, 24, 0, 24),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerTR = new("Frame", {
+        Size = UDim2.new(0, 60, 0, 2),
+        Position = UDim2.new(1, -84, 0, 24),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerTRv = new("Frame", {
+        Size = UDim2.new(0, 2, 0, 60),
+        Position = UDim2.new(1, -26, 0, 24),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerBL = new("Frame", {
+        Size = UDim2.new(0, 60, 0, 2),
+        Position = UDim2.new(0, 24, 1, -26),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerBLv = new("Frame", {
+        Size = UDim2.new(0, 2, 0, 60),
+        Position = UDim2.new(0, 24, 1, -84),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerBR = new("Frame", {
+        Size = UDim2.new(0, 60, 0, 2),
+        Position = UDim2.new(1, -84, 1, -26),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+    local cornerBRv = new("Frame", {
+        Size = UDim2.new(0, 2, 0, 60),
+        Position = UDim2.new(1, -26, 1, -84),
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ZIndex = 65,
+        Parent = overlay,
+    })
+
+    local topLeftInfo = new("TextLabel", {
+        Size = UDim2.new(0, 220, 0, 14),
+        Position = UDim2.new(0, 30, 0, 14),
+        BackgroundTransparency = 1,
+        Text = "RYZE // BUILD 1.0.0",
+        TextColor3 = Color3.fromRGB(140, 140, 160),
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTransparency = 1,
+        ZIndex = 66,
+        Parent = overlay,
+    })
+    TweenService:Create(topLeftInfo, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
     }):Play()
 
-    local total = 2.2
+    local topRightInfo = new("TextLabel", {
+        Size = UDim2.new(0, 220, 0, 14),
+        Position = UDim2.new(1, -250, 0, 14),
+        BackgroundTransparency = 1,
+        Text = os.date("%H:%M:%S"),
+        TextColor3 = accent,
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        TextTransparency = 1,
+        ZIndex = 66,
+        Parent = overlay,
+    })
+    TweenService:Create(topRightInfo, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+    }):Play()
+
+    local bottomInfo = new("TextLabel", {
+        Size = UDim2.new(0, 400, 0, 14),
+        Position = UDim2.new(0.5, -200, 1, -40),
+        BackgroundTransparency = 1,
+        Text = "LOADING MODULES... PLEASE WAIT",
+        TextColor3 = Color3.fromRGB(120, 120, 140),
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextTransparency = 1,
+        ZIndex = 66,
+        Parent = overlay,
+    })
+    TweenService:Create(bottomInfo, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        TextTransparency = 0,
+    }):Play()
+
+    local steps = {
+        {p = 0.00, s = "INITIALIZING",  t = "Inicializando ambiente..."},
+        {p = 0.15, s = "LOADING",       t = "Carregando modulos..."},
+        {p = 0.35, s = "HOOKING",       t = "Aplicando hooks..."},
+        {p = 0.55, s = "RENDERING",     t = "Preparando interface..."},
+        {p = 0.75, s = "CALIBRATING",   t = "Calibrando sistema..."},
+        {p = 0.90, s = "FINALIZING",    t = "Finalizando..."},
+        {p = 1.00, s = "READY",         t = "Pronto!"},
+    }
+
+    TweenService:Create(cornerTL, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 100, 0, 2),
+    }):Play()
+    TweenService:Create(cornerTLv, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 2, 0, 100),
+    }):Play()
+    TweenService:Create(cornerTR, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0.1), {
+        Size = UDim2.new(0, 100, 0, 2),
+    }):Play()
+    TweenService:Create(cornerTRv, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0.1), {
+        Size = UDim2.new(0, 2, 0, 100),
+    }):Play()
+    TweenService:Create(cornerBL, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0.2), {
+        Size = UDim2.new(0, 100, 0, 2),
+    }):Play()
+    TweenService:Create(cornerBLv, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0.2), {
+        Size = UDim2.new(0, 2, 0, 100),
+    }):Play()
+    TweenService:Create(cornerBR, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0.3), {
+        Size = UDim2.new(0, 100, 0, 2),
+    }):Play()
+    TweenService:Create(cornerBRv, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0.3), {
+        Size = UDim2.new(0, 2, 0, 100),
+    }):Play()
+
+    local total = 3.4
     local elapsed = 0
-    local lastStep = 0
+    local lastStep = -1
+    local glitchDone = false
 
     local conn
     conn = RunService.RenderStepped:Connect(function(dt)
         elapsed = elapsed + dt
         local p = math.clamp(elapsed / total, 0, 1)
-        local eased = 1 - (1 - p) * (1 - p)
+        local eased = 1 - (1 - p) * (1 - p) * (1 - p)
         barFill.Size = UDim2.new(eased, 0, 1, 0)
+        barGlow.Position = UDim2.new(eased, -20, 0.5, -5)
         percent.Text = math.floor(eased * 100) .. "%"
 
-        for i = #rotSteps, 1, -1 do
-            if p >= rotSteps[i].p and i > lastStep then
+        for i = #steps, 1, -1 do
+            if p >= steps[i].p and i > lastStep then
                 lastStep = i
-                subtitle.Text = rotSteps[i].t
+                statusText.Text = steps[i].s
+                subtitle.Text = steps[i].t
                 break
             end
         end
 
+        if p > 0.4 and not glitchDone then
+            glitchDone = true
+            local originalText = title.Text
+            local glitchChars = {"#", "%", "@", "&", "*", "!", "?"}
+            task.spawn(function()
+                for i = 1, 8 do
+                    local glitched = ""
+                    for c = 1, #originalText do
+                        if math.random() < 0.4 then
+                            glitched = glitched .. glitchChars[math.random(#glitchChars)]
+                        else
+                            glitched = glitched .. originalText:sub(c, c)
+                        end
+                    end
+                    title.Text = glitched
+                    task.wait(0.03)
+                end
+                title.Text = originalText
+            end)
+        end
+
         if p >= 1 then
             if conn then conn:Disconnect() end
-            task.wait(0.25)
-            TweenService:Create(overlay, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
+            task.wait(0.3)
+
+            TweenService:Create(overlay, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+                BackgroundTransparency = 1,
+            }):Play()
+
             for _, child in ipairs(center:GetDescendants()) do
                 if child:IsA("TextLabel") then
-                    TweenService:Create(child, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+                    TweenService:Create(child, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
                 elseif child:IsA("Frame") then
-                    TweenService:Create(child, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+                    TweenService:Create(child, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
                 end
             end
-            task.wait(0.4)
+
+            for _, child in ipairs(overlay:GetChildren()) do
+                if child:IsA("Frame") then
+                    TweenService:Create(child, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+                elseif child:IsA("TextLabel") then
+                    TweenService:Create(child, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+                end
+            end
+
+            task.wait(0.55)
             overlay:Destroy()
             parent.Visible = true
             if onDone then onDone() end
