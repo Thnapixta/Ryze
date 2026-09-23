@@ -3097,6 +3097,6 @@ function Ryze.init()
         print("[Ryze] Menu carregado com sucesso.")
     end)
 end
+Ryze.openTeamModal = openTeamModal
 
 return Ryze
-Ryze.openTeamModal = openTeamModal
