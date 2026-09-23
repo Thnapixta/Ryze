@@ -519,8 +519,8 @@ local R6_CONNECTIONS = {
     {"Head","Torso"},{"Torso","Left Arm"},{"Torso","Right Arm"},
     {"Torso","Left Leg"},{"Torso","Right Leg"},
 }
-local R6_HEAD_OFFSET = Vector3.new(0, 0.6, 0)
-local R6_ARM_OFFSET = Vector3.new(0, 0.6, 0)
+local R6_HEAD_OFFSET = Vector3.new(0, 0.5, 0)
+local R6_ARM_OFFSET = Vector3.new(0, 0.5, 0)
 local R6_LEG_OFFSET = Vector3.new(0, -0.5, 0)
 local R15_HEAD_OFFSET = Vector3.new(0, 0.5, 0)
 
@@ -537,7 +537,10 @@ end
 local function projectPoint(worldPos, cam)
     local pos, onScreen = cam:WorldToViewportPoint(worldPos)
     if onScreen and pos.Z > 0 then
-        return Vector2.new(pos.X, pos.Y)
+        local vp = cam.ViewportSize
+        if pos.X >= 0 and pos.X <= vp.X and pos.Y >= 0 and pos.Y <= vp.Y then
+            return Vector2.new(pos.X, pos.Y)
+        end
     end
     return nil
 end
@@ -688,6 +691,22 @@ local function updateEspFor(plr)
 
     if not cam then return end
 
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        for _, l in ipairs(data.skeletonLines) do
+            if l then pcall(function() l.Visible = false end) end
+        end
+        return
+    end
+
+    local hrpScreen, hrpOnScreen = cam:WorldToViewportPoint(hrp.Position)
+    if not hrpOnScreen or hrpScreen.Z <= 0 then
+        for _, l in ipairs(data.skeletonLines) do
+            if l then pcall(function() l.Visible = false end) end
+        end
+        return
+    end
+
     local bones = getBones(char, cam, rig)
     local connections = (rig == "R15") and R15_CONNECTIONS or R6_CONNECTIONS
     local color = getSkeletonColor(plr)
@@ -702,7 +721,7 @@ local function updateEspFor(plr)
         if line then
             if a and b then
                 local dist = (a - b).Magnitude
-                if dist <= maxLineLen then
+                if dist > 0 and dist <= maxLineLen then
                     line.Visible = true
                     line.From = a
                     line.To = b
@@ -726,8 +745,21 @@ end
 local function startEspLoop()
     if state.espThread then task.cancel(state.espThread) end
     state.espThread = task.spawn(function()
+        local lastCamera = workspace.CurrentCamera
         while espCfg.active and espCfg.skeleton do
             RunService.RenderStepped:Wait()
+
+            local cam = workspace.CurrentCamera
+            if cam ~= lastCamera then
+                lastCamera = cam
+                for _, data in pairs(espData) do
+                    removeLinesOfData(data)
+                    data.skeletonLines = createSkeletonLines()
+                    data.lastRig = nil
+                    data.lastChar = nil
+                end
+            end
+
             for _, plr in ipairs(game.Players:GetPlayers()) do
                 if plr ~= player and isAlive(plr.Character) then
                     if not espData[plr] then createEspFor(plr) end
