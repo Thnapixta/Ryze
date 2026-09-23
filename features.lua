@@ -266,25 +266,31 @@ end
 
 local function startAimbot()
     pcall(function() RunService:UnbindFromRenderStep("RyzeAimbot") end)
-    RunService:BindToRenderStep("RyzeAimbot", Enum.RenderPriority.Camera.Value - 1, function()
+    RunService:BindToRenderStep("RyzeAimbot", Enum.RenderPriority.Camera.Value, function()
         if not aimbotCfg.active then return end
         if not ui.gui or not ui.gui.Parent then return end
         if state.silentShotFrame then return end
-        pcall(function()
-            local t, tp = bestTarget(aimbotCfg, false)
-            if t and tp and isAlive(t) then
-                local cam = workspace.CurrentCamera
-                if cam then
-                    local targetCF = CFrame.lookAt(cam.CFrame.Position, tp.Position)
-                    if aimbotCfg.smooth <= 0.001 then
-                        cam.CFrame = targetCF
-                    else
-                        local a = math.clamp(1 - aimbotCfg.smooth, 0.05, 1)
-                        cam.CFrame = cam.CFrame:Lerp(targetCF, a)
-                    end
-                end
-            end
-        end)
+
+        local char = player.Character
+        if not char or not isAlive(char) then return end
+        local myHead = char:FindFirstChild("Head")
+        local cam = workspace.CurrentCamera
+        if not myHead or not cam then return end
+
+        local target, targetPart = bestTarget(aimbotCfg, false)
+        if not target or not targetPart then return end
+        if not isAlive(target) then return end
+
+        local camPos = cam.CFrame.Position
+        local targetPos = targetPart.Position
+        local newCF = CFrame.lookAt(camPos, targetPos)
+
+        if aimbotCfg.smooth <= 0.001 then
+            cam.CFrame = newCF
+        else
+            local a = math.clamp(1 - aimbotCfg.smooth, 0.05, 1)
+            cam.CFrame = cam.CFrame:Lerp(newCF, a)
+        end
     end)
 end
 
@@ -526,42 +532,6 @@ local function getRigType(char)
     return nil
 end
 
-local function projectPoint(worldPos, cam)
-    local pos, onScreen = cam:WorldToViewportPoint(worldPos)
-    if onScreen and pos.Z > 0 then
-        return Vector2.new(pos.X, pos.Y)
-    end
-    return nil
-end
-
-local function getBones(char, cam, rig)
-    local bones = {}
-    if rig == "R15" then
-        for _, name in ipairs(R15_PARTS) do
-            local p = char:FindFirstChild(name)
-            if p and p:IsA("BasePart") then
-                local offset = (name == "Head") and R15_HEAD_OFFSET or Vector3.new()
-                local v = projectPoint(p.Position + offset, cam)
-                if v then bones[name] = v end
-            end
-        end
-    else
-        local head = char:FindFirstChild("Head")
-        local torso = char:FindFirstChild("Torso")
-        local leftArm = char:FindFirstChild("Left Arm")
-        local rightArm = char:FindFirstChild("Right Arm")
-        local leftLeg = char:FindFirstChild("Left Leg")
-        local rightLeg = char:FindFirstChild("Right Leg")
-        if head then local v = projectPoint(head.Position + R6_HEAD_OFFSET, cam); if v then bones["Head"] = v end end
-        if torso then local v = projectPoint(torso.Position, cam); if v then bones["Torso"] = v end end
-        if leftArm then local v = projectPoint(leftArm.Position + R6_ARM_OFFSET, cam); if v then bones["Left Arm"] = v end end
-        if rightArm then local v = projectPoint(rightArm.Position + R6_ARM_OFFSET, cam); if v then bones["Right Arm"] = v end end
-        if leftLeg then local v = projectPoint(leftLeg.Position + R6_LEG_OFFSET, cam); if v then bones["Left Leg"] = v end end
-        if rightLeg then local v = projectPoint(rightLeg.Position + R6_LEG_OFFSET, cam); if v then bones["Right Leg"] = v end end
-    end
-    return bones
-end
-
 local function createSkeletonLines()
     local lines = {}
     for i = 1, C.MAX_SKELETON_LINES do
@@ -622,7 +592,17 @@ local function getSkeletonColor(plr)
     return espCfg.skeletonColor
 end
 
-local BONE_LERP = 0.5
+local function worldToScreen(worldPos, camCF, viewportSize, fov)
+    local rel = camCF:PointToObjectSpace(worldPos)
+    if rel.Z >= 0 then return nil end
+    local tanHalf = math.tan(math.rad(fov) / 2)
+    local aspect = viewportSize.X / viewportSize.Y
+    local x = (rel.X / -rel.Z) / (tanHalf * aspect) * viewportSize.X / 2 + viewportSize.X / 2
+    local y = (rel.Y / -rel.Z) / tanHalf * viewportSize.Y / 2 + viewportSize.Y / 2
+    return Vector2.new(x, y)
+end
+
+local BONE_LERP = 0.4
 
 local function updateEspFor(plr)
     local data = espData[plr]
@@ -630,6 +610,11 @@ local function updateEspFor(plr)
 
     local char = plr.Character
     local cam = workspace.CurrentCamera
+    if not cam then return end
+
+    local camCF = cam.CFrame
+    local viewport = cam.ViewportSize
+    local fov = cam.FieldOfView
     local visible = espCfg.active and espCfg.skeleton
 
     if data.lastChar ~= char then
@@ -686,9 +671,50 @@ local function updateEspFor(plr)
         data.lastBones = nil
     end
 
-    if not cam then return end
+    local rawBones = {}
+    if rig == "R15" then
+        for _, name in ipairs(R15_PARTS) do
+            local p = char:FindFirstChild(name)
+            if p and p:IsA("BasePart") then
+                local offset = (name == "Head") and R15_HEAD_OFFSET or Vector3.new()
+                local v = worldToScreen(p.Position + offset, camCF, viewport, fov)
+                if v then rawBones[name] = v end
+            end
+        end
+    else
+        local head = char:FindFirstChild("Head")
+        local torso = char:FindFirstChild("Torso")
+        local leftArm = char:FindFirstChild("Left Arm")
+        local rightArm = char:FindFirstChild("Right Arm")
+        local leftLeg = char:FindFirstChild("Left Leg")
+        local rightLeg = char:FindFirstChild("Right Leg")
 
-    local rawBones = getBones(char, cam, rig)
+        if head then
+            local v = worldToScreen(head.Position + R6_HEAD_OFFSET, camCF, viewport, fov)
+            if v then rawBones["Head"] = v end
+        end
+        if torso then
+            local v = worldToScreen(torso.Position, camCF, viewport, fov)
+            if v then rawBones["Torso"] = v end
+        end
+        if leftArm then
+            local v = worldToScreen(leftArm.Position + R6_ARM_OFFSET, camCF, viewport, fov)
+            if v then rawBones["Left Arm"] = v end
+        end
+        if rightArm then
+            local v = worldToScreen(rightArm.Position + R6_ARM_OFFSET, camCF, viewport, fov)
+            if v then rawBones["Right Arm"] = v end
+        end
+        if leftLeg then
+            local v = worldToScreen(leftLeg.Position + R6_LEG_OFFSET, camCF, viewport, fov)
+            if v then rawBones["Left Leg"] = v end
+        end
+        if rightLeg then
+            local v = worldToScreen(rightLeg.Position + R6_LEG_OFFSET, camCF, viewport, fov)
+            if v then rawBones["Right Leg"] = v end
+        end
+    end
+
     local smoothBones = {}
     if data.lastBones then
         for name, pos in pairs(rawBones) do
@@ -708,7 +734,7 @@ local function updateEspFor(plr)
 
     local connections = (rig == "R15") and R15_CONNECTIONS or R6_CONNECTIONS
     local color = getSkeletonColor(plr)
-    local maxLineLen = cam.ViewportSize.X * 0.5
+    local maxLineLen = viewport.X * 0.5
 
     local i = 1
     for _, conn in ipairs(connections) do
@@ -744,6 +770,8 @@ local function startEspLoop()
     pcall(function() RunService:UnbindFromRenderStep("RyzeEsp") end)
     RunService:BindToRenderStep("RyzeEsp", Enum.RenderPriority.Camera.Value + 1, function()
         if not espCfg.active or not espCfg.skeleton then return end
+        if not workspace.CurrentCamera then return end
+
         for _, plr in ipairs(game.Players:GetPlayers()) do
             if plr ~= player and isAlive(plr.Character) then
                 if not espData[plr] then createEspFor(plr) end
@@ -1262,9 +1290,6 @@ local function openTeamModal()
         createPlayerRow(p, i)
     end
 end
-
-Ryze.openTeamModal = openTeamModal
-
 local function collectConfig()
     return {
         aimbot = {
@@ -3074,3 +3099,4 @@ function Ryze.init()
 end
 
 return Ryze
+Ryze.openTeamModal = openTeamModal
